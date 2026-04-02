@@ -1,0 +1,20 @@
+{"input": "What did we discuss with Brian last week?", "output": "synthesis"}
+{"input": "Who was in the meeting on March 24?", "output": "entity"}
+{"input": "When is the Q2 launch date?", "output": "temporal"}
+{"input": "What decisions were made about the budget?", "output": "factual"}
+{"input": "What are my action items from yesterday?", "output": "actions"}
+{"input": "Show me everything related to Project Alpha", "output": "aggregation"}
+{"input": "What happened in the last board meeting?", "output": "history"}
+{"input": "How many meetings did we have this month?", "output": "aggregation"}
+{"input": "What did Sarah say about the pricing?", "output": "factual"}
+{"input": "Who is responsible for the API integration?", "output": "entity"}
+{"input": "When did we last talk to the Acme team?", "output": "temporal"}
+{"input": "Summarize all interactions with investors this quarter", "output": "synthesis"}
+{"input": "What tasks are assigned to me?", "output": "actions"}
+{"input": "Give me a timeline of the product redesign", "output": "history"}
+{"input": "What's the status of the hiring pipeline?", "output": "factual"}
+{"input": "Who mentioned machine learning in recent meetings?", "output": "entity"}
+{"input": "What was decided about remote work policy?", "output": "factual"}
+{"input": "How many deals closed in Q1?", "output": "aggregation"}
+{"input": "What follow-ups do I need to do this week?", "output": "actions"}
+{"input": "What's been happening with the mobile app project?", "output": "synthesis"}

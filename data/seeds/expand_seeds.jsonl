@@ -1,0 +1,10 @@
+{"input": "what about brian", "output": "What has been discussed with Brian across all meetings and notes? Include decisions made, action items assigned, and recent interactions."}
+{"input": "acme stuff", "output": "What are all interactions, meetings, decisions, and action items related to Acme? Include contract details, key contacts, and any pending follow-ups."}
+{"input": "what did we decide", "output": "What are the most recent decisions made across all meetings and discussions? Include who was involved, what was decided, and any resulting action items."}
+{"input": "q2 launch", "output": "What is the current status of the Q2 launch? Include the launch date, key milestones, assigned responsibilities, and any blockers or open decisions."}
+{"input": "my tasks", "output": "What are all action items and tasks currently assigned to me? Include deadlines, which meeting or discussion they came from, and their current status."}
+{"input": "budget", "output": "What has been discussed about budget across all recent meetings and notes? Include approved amounts, pending approvals, budget owners, and any constraints or changes."}
+{"input": "who was in that meeting", "output": "Who attended the most recent meeting? Include all participants mentioned, their roles or organizations, and key topics discussed."}
+{"input": "hiring", "output": "What is the current status of all hiring efforts? Include open positions, candidate pipeline, interview stages, decisions made, and target start dates."}
+{"input": "last week", "output": "What happened last week across all meetings, notes, and conversations? Summarize key discussions, decisions made, action items created, and any important updates."}
+{"input": "design feedback", "output": "What feedback has been given about design across meetings, notes, and messages? Include who provided the feedback, what specifically was discussed, and any resulting design decisions or changes."}
