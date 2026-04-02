@@ -1,10 +1,17 @@
 """
-Rabbit — Synthetic Data Generator
-Uses Claude API to expand seed examples into large training datasets.
+Rabbit — Synthetic Data Generator (Universe-Based)
+
+Generates training data by creating fictional "organization universes" with:
+- Consistent cast of characters (recurring names across meetings)
+- Meeting sequences (follow-ups, decision evolution, contradictions)
+- Realistic org dynamics (scope creep, priority shifts, implicit references)
+
+This produces connected, realistic training data — not isolated random examples.
 
 Usage:
-    python scripts/generate_synthetic.py --task intent --count 2000
-    python scripts/generate_synthetic.py --task all --count 10000
+    python scripts/generate_synthetic.py --count 5000
+    python scripts/generate_synthetic.py --count 1000 --task intent
+    python scripts/generate_synthetic.py --count 5000 --universes 10
 """
 
 import argparse
@@ -19,225 +26,425 @@ import anthropic
 # ── Config ──────────────────────────────────────────────────────────────────
 
 TASKS = ["intent", "extract", "triage", "expand", "answer"]
-
-SEED_DIR = Path("data/seeds")
+SEED_DIR = Path("seed")
 OUTPUT_DIR = Path("data/synthetic")
 
-# How many seed examples to include in each generation prompt
-SEEDS_PER_BATCH = 15
-
-# How many examples to request per API call
-EXAMPLES_PER_CALL = 25
-
 MODEL = "claude-sonnet-4-20250514"
+MAX_TOKENS = 8192
 
-# ── Task-specific generation prompts ────────────────────────────────────────
+# ── Organization Universe Templates ────────────────────────────────────────
 
-TASK_PROMPTS = {
-    "intent": """You are generating training data for Rabbit, an AI model that classifies user query intent for an organizational memory system.
+UNIVERSE_PROMPT = """You are generating realistic organizational memory data for training Rabbit, an AI model that powers organizational memory for teams.
 
-Given these seed examples, generate {count} NEW examples following the exact same format.
+CRITICAL RULES:
+1. You are creating data for ONE fictional organization. Keep names, projects, and context CONSISTENT across all examples.
+2. People recur across meetings. Decisions evolve. Meetings reference previous meetings.
+3. Include realistic messiness: vague references ("that thing we discussed"), contradictions, scope changes, follow-ups.
+4. Vary formality: some meetings are structured, others are casual standups or Slack-style messages.
 
-Rules:
-- Input is a natural language question someone would ask about their work memories
-- Output is exactly ONE word from: factual | entity | temporal | synthesis | actions | history | aggregation
-- Vary the topics: meetings, projects, people, deadlines, budgets, decisions, emails, Slack messages
-- Vary phrasing: formal, casual, typos, short, long, vague, specific
-- Vary industries: tech, finance, healthcare, legal, marketing, education, consulting
-- Make some queries ambiguous to test edge cases
-- Output ONLY valid JSONL, one example per line
+ORGANIZATION PROFILE:
+{org_profile}
 
-Seed examples:
-{seeds}
+CAST OF CHARACTERS:
+{cast}
 
-Generate {count} new examples in JSONL format (one JSON object per line):""",
+ACTIVE PROJECTS/THREADS:
+{projects}
 
-    "extract": """You are generating training data for Rabbit, an AI model that extracts structured information from raw text for an organizational memory system.
+TIMELINE: {timeline}
 
-Given these seed examples, generate {count} NEW examples following the exact same format.
+Now generate {count} training examples for the task: {task}
 
-Rules:
-- Input is raw text: meeting notes, email snippets, Slack messages, note fragments
-- Output is a JSON object with keys: people, organizations, decisions, action_items, dates, topics
-- action_items should have: owner, task, due (if mentioned)
-- Vary the complexity: some have 1 entity, some have 10+
-- Include messy inputs: abbreviations, typos, incomplete sentences
-- Vary industries and contexts
-- Output ONLY valid JSONL, one example per line
+{task_instructions}
 
-Seed examples:
-{seeds}
+Output ONLY valid JSONL — one JSON object per line, each with "input" and "output" keys.
+Do NOT wrap in code blocks. Do NOT add commentary. ONLY JSONL lines."""
 
-Generate {count} new examples in JSONL format (one JSON object per line):""",
+# ── Organization profiles for diversity ─────────────────────────────────────
 
-    "triage": """You are generating training data for Rabbit, an AI model that classifies and summarizes incoming content for an organizational memory system.
+ORG_PROFILES = [
+    {
+        "name": "NovaByte (Series A SaaS startup, 25 people)",
+        "industry": "B2B SaaS — project management tool",
+        "cast": [
+            "Priya (Founder/CEO)", "Rohit (CTO)", "Ananya (Head of Product)",
+            "Karan (Backend Lead)", "Sneha (Frontend Engineer)", "Amit (Sales Lead)",
+            "Neha (Designer)", "Vikram (DevOps)", "Meera (Customer Success)",
+            "Farhan (Data Scientist)"
+        ],
+        "projects": [
+            "Enterprise tier launch (pricing, features, pilot customers)",
+            "Slack integration (reliability issues, webhook drops)",
+            "Dashboard redesign (user complaints about complexity)",
+            "Series B fundraise prep (metrics, deck, investor meetings)"
+        ],
+        "timeline": "January 2026 - April 2026"
+    },
+    {
+        "name": "Argonal (Enterprise IT services, 200 people)",
+        "industry": "Managed services — ERP/CRM for large clients",
+        "cast": [
+            "Brian (Client Manager)", "Anjan (Tech Lead)", "Misha (Project Manager)",
+            "Lisa (QA Lead)", "Suzuki (Client Stakeholder)", "Julio (Integration Specialist)",
+            "Bill (Executive Sponsor)", "Kunal (DevOps)", "Deepa (Business Analyst)",
+            "Rahul (Support Lead)"
+        ],
+        "projects": [
+            "DDXT web migration (tickets, deployments, interface issues)",
+            "Quarterly audit preparation (user profiles, licensing)",
+            "Data push coordination with Japan team",
+            "Managed services reporting (consumption, ticket metrics)"
+        ],
+        "timeline": "February 2026 - May 2026"
+    },
+    {
+        "name": "HealthSync (Healthcare AI startup, 15 people)",
+        "industry": "AI-powered clinical documentation",
+        "cast": [
+            "Dr. Aisha (Co-founder/CMO)", "Raj (Co-founder/CTO)", "Tanya (ML Engineer)",
+            "Nikhil (Backend Engineer)", "Kavita (Product Manager)", "Suresh (Compliance Lead)",
+            "Pooja (UX Researcher)", "Arjun (iOS Developer)", "Rekha (Sales)",
+            "Manoj (Customer Support)"
+        ],
+        "projects": [
+            "HIPAA compliance overhaul (audit, encryption, access logs)",
+            "Voice-to-note accuracy improvements (model fine-tuning)",
+            "Hospital pilot with St. Mary's (50 doctors, 3 departments)",
+            "Mobile app v2 (offline mode, sync issues)"
+        ],
+        "timeline": "March 2026 - June 2026"
+    },
+    {
+        "name": "UrbanPulse (PropTech scale-up, 80 people)",
+        "industry": "Real estate analytics and tenant management",
+        "cast": [
+            "David (CEO)", "Simran (VP Engineering)", "Aarav (Product Lead)",
+            "Jyoti (Data Engineering Lead)", "Kabir (Frontend Lead)", "Nisha (Head of Sales)",
+            "Ravi (ML Engineer)", "Parul (Customer Success)", "Manish (DevOps)",
+            "Divya (Legal/Compliance)"
+        ],
+        "projects": [
+            "Predictive pricing model (accuracy issues, client trust)",
+            "Tenant portal redesign (feedback from property managers)",
+            "API platform for third-party integrations",
+            "SOC 2 Type II certification (deadline pressure)"
+        ],
+        "timeline": "January 2026 - April 2026"
+    },
+    {
+        "name": "LearnFlow (EdTech, 40 people)",
+        "industry": "AI tutoring and curriculum platform",
+        "cast": [
+            "Megha (Founder)", "Siddharth (CTO)", "Ritu (Head of Content)",
+            "Aakash (ML Lead)", "Prerna (Product Manager)", "Gaurav (Backend)",
+            "Ishita (Mobile Lead)", "Rohan (Growth)", "Swati (Partnership Lead)",
+            "Vivek (QA)"
+        ],
+        "projects": [
+            "Adaptive learning engine (personalization, A/B testing)",
+            "School district pilot (500 students, 20 teachers)",
+            "Content creation pipeline (AI-assisted, quality review)",
+            "Parent dashboard (engagement tracking, privacy concerns)"
+        ],
+        "timeline": "February 2026 - May 2026"
+    },
+    {
+        "name": "FinEdge (Fintech, 60 people)",
+        "industry": "AI-powered expense management and forecasting",
+        "cast": [
+            "Akash (CEO)", "Shreya (CTO)", "Varun (Product Lead)",
+            "Nandini (Compliance Officer)", "Harsh (Backend Lead)", "Tanvi (Frontend)",
+            "Sanjay (Sales Director)", "Bhavna (Customer Success)", "Rahul (Data Engineer)",
+            "Deepak (Security Lead)"
+        ],
+        "projects": [
+            "Bank integration reliability (API failures, reconciliation)",
+            "SOX compliance audit (Q2 deadline)",
+            "Forecasting model v3 (accuracy improvement, enterprise clients)",
+            "Mobile expense capture (OCR, receipt scanning)"
+        ],
+        "timeline": "January 2026 - April 2026"
+    },
+    {
+        "name": "GreenGrid (CleanTech, 30 people)",
+        "industry": "Energy management and carbon tracking for buildings",
+        "cast": [
+            "Lena (Founder/CEO)", "Arjun (VP Engineering)", "Zara (Sustainability Lead)",
+            "Dev (IoT Engineer)", "Priyanka (Product Manager)", "Sameer (Data Scientist)",
+            "Noor (Enterprise Sales)", "Ria (UX Designer)", "Kunal (Backend)",
+            "Fatima (Operations)"
+        ],
+        "projects": [
+            "Real-time energy dashboard (sensor integration, latency)",
+            "Carbon credit reporting (regulatory changes, EU compliance)",
+            "Building automation pilot with Meridian Properties (3 buildings)",
+            "API for HVAC system integrations"
+        ],
+        "timeline": "February 2026 - May 2026"
+    },
+    {
+        "name": "CraftOS (Developer tools, 20 people)",
+        "industry": "AI code review and development workflow automation",
+        "cast": [
+            "Ankit (Founder/CEO)", "Maya (CTO)", "Sahil (ML Lead)",
+            "Diya (Product Manager)", "Nitin (Backend Engineer)", "Pooja (Frontend)",
+            "Tarun (DevRel)", "Aditi (QA Lead)", "Rajan (Sales)",
+            "Shreyas (Infrastructure)"
+        ],
+        "projects": [
+            "AI review accuracy (false positive reduction)",
+            "VS Code extension v2 (performance, new features)",
+            "Enterprise SSO integration (OAuth, SAML)",
+            "Usage-based pricing migration (from flat-rate)"
+        ],
+        "timeline": "March 2026 - June 2026"
+    },
+    {
+        "name": "TravelMind (Travel tech, 50 people)",
+        "industry": "AI-powered corporate travel management",
+        "cast": [
+            "Arun (CEO)", "Pallavi (CTO)", "Mandar (Product Head)",
+            "Swapnil (Backend Lead)", "Ritika (Frontend Lead)", "Jayesh (Sales VP)",
+            "Ankita (ML Engineer)", "Viraj (Operations)", "Deepa (Finance)",
+            "Sandeep (Customer Success)"
+        ],
+        "projects": [
+            "Flight recommendation engine (cost optimization, policy compliance)",
+            "Expense reconciliation automation (bank feeds, receipt matching)",
+            "Marriott/Hilton direct booking integration",
+            "Travel policy enforcement engine (approvals, exceptions)"
+        ],
+        "timeline": "January 2026 - April 2026"
+    },
+    {
+        "name": "MediaForge (Content/Media, 35 people)",
+        "industry": "AI-powered content creation and distribution platform",
+        "cast": [
+            "Rhea (Founder)", "Karthik (CTO)", "Anjali (Head of Content AI)",
+            "Vikrant (Backend Lead)", "Sonali (Product Manager)", "Imran (Growth Lead)",
+            "Deepika (Designer)", "Nikhil (ML Engineer)", "Ashwin (Sales)",
+            "Meera (Customer Success)"
+        ],
+        "projects": [
+            "Content generation quality (hallucination reduction, brand voice)",
+            "Multi-channel publishing (scheduling, analytics aggregation)",
+            "Enterprise content approval workflow",
+            "SEO optimization engine (keyword research, content scoring)"
+        ],
+        "timeline": "February 2026 - May 2026"
+    },
+]
 
-Given these seed examples, generate {count} NEW examples following the exact same format.
+# ── Task-specific instructions ──────────────────────────────────────────────
 
-Rules:
-- Input is raw captured content (meeting transcript, note, email, Slack thread)
-- Output is a JSON object with keys: type, summary, tags
-- type is one of: meeting, note, email, decision, action_item, update, conversation
-- summary is 1-2 sentences capturing the essence
-- tags are 3-6 lowercase keywords
-- Vary content length: 1 sentence to 3 paragraphs
-- Output ONLY valid JSONL, one example per line
+TASK_INSTRUCTIONS = {
+    "intent": """Generate query intent classification examples.
+Each example: a user asks a question about their organizational memories.
+- "input": the user's natural language question (vary: formal, casual, vague, specific, with typos)
+- "output": exactly ONE word from: factual | entity | temporal | synthesis | actions | history | aggregation
 
-Seed examples:
-{seeds}
+Make queries that reference THIS organization's people, projects, and meetings specifically.
+Include vague queries like "what about that pricing thing" and precise ones like "Who attended the March 15 standup?"
+Include queries that reference previous meetings implicitly: "that discussion from last week", "the thing Brian mentioned".""",
 
-Generate {count} new examples in JSONL format (one JSON object per line):""",
+    "extract": """Generate entity/fact extraction examples.
+Each example: raw text from a meeting, note, email, or Slack message from THIS organization.
+- "input": the raw text (meeting transcript snippet, note, email body, standup update)
+- "output": JSON object with keys: people, organizations, decisions, action_items, dates, topics
+  - action_items format: [{{"owner": "Name", "task": "description", "due": "date/timeframe"}}]
 
-    "expand": """You are generating training data for Rabbit, an AI model that expands vague user queries into precise search queries for an organizational memory system.
+Make inputs realistic and messy — include abbreviations, incomplete sentences, casual tone.
+Reference the SAME people and projects across multiple examples.
+Include follow-up meetings where decisions reference or reverse previous ones.""",
 
-Given these seed examples, generate {count} NEW examples following the exact same format.
+    "triage": """Generate memory classification and summary examples.
+Each example: raw captured content that needs to be classified and summarized.
+- "input": raw text (meeting transcript, note, email, Slack thread, standup, decision record)
+- "output": JSON object with keys: type, summary, tags
+  - type: one of: meeting, note, email, decision, action_item, update, conversation
+  - summary: 1-2 sentence essence
+  - tags: 3-6 lowercase keywords
 
-Rules:
-- Input is a short/vague user query (how people actually type)
-- Output is an expanded, specific query that captures the user's likely intent
-- The expanded query should mention: what to search for, what types of information to include, time ranges if relevant
-- Vary vagueness: "brian?" vs "what about the Q2 thing" vs "updates on project alpha"
-- This is THE MOST CRITICAL TASK — bad expansion = bad search results
-- Output ONLY valid JSONL, one example per line
+Make inputs vary in length (1 sentence to several paragraphs).
+Include content that references previous meetings or ongoing threads.
+Some inputs should be follow-ups: "Following up on yesterday's discussion about...".""",
 
-Seed examples:
-{seeds}
+    "expand": """Generate query expansion examples.
+Each example: a vague user query expanded into a precise search query.
+- "input": short/vague query (how people ACTUALLY type) — reference this org's people/projects
+- "output": expanded query that captures likely intent, mentions what to search for
 
-Generate {count} new examples in JSONL format (one JSON object per line):""",
+THIS IS THE MOST CRITICAL TASK. Bad expansion = bad search results.
+Include:
+- Name-only queries: "priya", "what about rohit"
+- Project references: "the slack thing", "enterprise stuff"
+- Temporal vagueness: "last week", "recently", "that meeting"
+- Implicit references: "what did we decide", "any updates", "the pricing discussion"
+- Typos and fragments: "standup tmrw?", "amit client", "bug status".""",
 
-    "answer": """You are generating training data for Rabbit, an AI model that generates conversational answers from retrieved memory context.
+    "answer": """Generate conversational Q&A examples over retrieved memories.
+Each example: a question + retrieved memory context → conversational answer with citations.
+- "input": formatted as "Question: [question]\\nMemories: [1] ... [2] ... [3] ..."
+- "output": conversational answer with [1][2][3] citations, NO markdown formatting
 
-Given these seed examples, generate {count} NEW examples following the exact same format.
-
-Rules:
-- Input has two parts: "Question:" and "Memories:" (numbered [1], [2], [3]...)
-- Output is a conversational answer with citations [1][2][3] referencing the memory sources
-- NO markdown formatting in the output (no **, no ##, no bullet points)
-- Answers should be natural, concise, and directly address the question
-- Include cases where memories partially answer the question
-- Include cases where memories conflict slightly
-- Output ONLY valid JSONL, one example per line
-
-Seed examples:
-{seeds}
-
-Generate {count} new examples in JSONL format (one JSON object per line):""",
+The memories should be from THIS organization — real meeting snippets, notes, decisions.
+Include cases where:
+- Memories fully answer the question
+- Memories partially answer (some info missing)
+- Memories show evolution/contradiction (decision changed between meetings)
+- Answer needs to synthesize across multiple meetings
+- Implicit links need to be made ("this connects to what was discussed on March 5")""",
 }
 
-# ── Core logic ──────────────────────────────────────────────────────────────
+# ── Seed loading ────────────────────────────────────────────────────────────
 
 
-def load_seeds(task: str) -> list[dict]:
-    """Load seed examples for a task."""
-    seed_file = SEED_DIR / f"{task}_seeds.jsonl"
-    if not seed_file.exists():
-        raise FileNotFoundError(
-            f"Seed file not found: {seed_file}\n"
-            f"Create it first with 100 hand-written examples."
-        )
+def load_seed_context() -> str:
+    """Load seed files as context for the generator."""
+    context_parts = []
+    for seed_file in SEED_DIR.glob("*.md"):
+        content = seed_file.read_text()
+        # Take first ~2000 chars of each as examples
+        context_parts.append(f"--- {seed_file.name} (excerpt) ---\n{content[:2000]}\n")
+    return "\n".join(context_parts)
 
-    seeds = []
-    with open(seed_file) as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                seeds.append(json.loads(line))
 
-    print(f"  Loaded {len(seeds)} seed examples from {seed_file}")
-    return seeds
+# ── Generation ──────────────────────────────────────────────────────────────
 
 
 def generate_batch(
     client: anthropic.Anthropic,
+    org: dict,
     task: str,
-    seeds: list[dict],
     count: int,
+    seed_context: str,
 ) -> list[dict]:
-    """Generate a batch of synthetic examples using Claude."""
+    """Generate a batch of examples for one org universe and task."""
 
-    # Sample random seeds for this batch
-    sampled = random.sample(seeds, min(SEEDS_PER_BATCH, len(seeds)))
-    seeds_text = "\n".join(json.dumps(s) for s in sampled)
+    prompt = UNIVERSE_PROMPT.format(
+        org_profile=org["name"],
+        cast="\n".join(f"- {c}" for c in org["cast"]),
+        projects="\n".join(f"- {p}" for p in org["projects"]),
+        timeline=org["timeline"],
+        count=count,
+        task=task.upper(),
+        task_instructions=TASK_INSTRUCTIONS[task],
+    )
 
-    prompt = TASK_PROMPTS[task].format(seeds=seeds_text, count=count)
+    # Add seed context for quality reference
+    system = (
+        "You are a training data generator for Rabbit, an AI model for organizational memory. "
+        "Generate realistic, connected examples that reflect how real organizations work. "
+        "Here are examples of real organizational data for reference:\n\n"
+        f"{seed_context[:3000]}\n\n"
+        "Match this level of realism and detail. Output ONLY valid JSONL."
+    )
 
     response = client.messages.create(
         model=MODEL,
-        max_tokens=4096,
+        max_tokens=MAX_TOKENS,
+        system=system,
         messages=[{"role": "user", "content": prompt}],
     )
 
-    # Parse JSONL from response
+    # Parse JSONL
     examples = []
     for line in response.content[0].text.strip().split("\n"):
         line = line.strip()
-        if not line:
+        if not line or line.startswith("```"):
             continue
         try:
             obj = json.loads(line)
             if "input" in obj and "output" in obj:
                 examples.append(obj)
         except json.JSONDecodeError:
-            continue  # skip malformed lines
+            continue
 
     return examples
 
 
-def generate_for_task(task: str, target_count: int):
-    """Generate synthetic data for a single task."""
-    print(f"\n{'='*60}")
-    print(f"  RABBIT — Generating synthetic data for: {task.upper()}")
-    print(f"  Target: {target_count} examples")
-    print(f"{'='*60}")
+def generate_all(total_count: int, tasks: list[str], num_universes: int):
+    """Generate synthetic data across multiple organization universes."""
 
-    client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
-    seeds = load_seeds(task)
+    client = anthropic.Anthropic()
+    seed_context = load_seed_context()
 
-    output_file = OUTPUT_DIR / f"{task}_synthetic.jsonl"
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Load existing examples if resuming
-    existing = []
-    if output_file.exists():
-        with open(output_file) as f:
-            for line in f:
-                if line.strip():
-                    existing.append(json.loads(line.strip()))
-        print(f"  Resuming: {len(existing)} examples already generated")
+    # Select universes
+    universes = random.sample(ORG_PROFILES, min(num_universes, len(ORG_PROFILES)))
 
-    total = len(existing)
-    batch_num = 0
+    # Distribute count across tasks and universes
+    per_task = total_count // len(tasks)
+    per_universe_per_task = max(per_task // len(universes), 10)
+    batch_size = min(25, per_universe_per_task)  # API generates ~25 well per call
 
-    while total < target_count:
-        batch_num += 1
-        remaining = target_count - total
-        batch_size = min(EXAMPLES_PER_CALL, remaining)
+    print(f"\n{'='*60}")
+    print(f"  RABBIT — Universe-Based Synthetic Data Generator")
+    print(f"  Total target: {total_count} examples")
+    print(f"  Tasks: {', '.join(tasks)}")
+    print(f"  Universes: {len(universes)}")
+    print(f"  Per task: ~{per_task} | Per universe per task: ~{per_universe_per_task}")
+    print(f"{'='*60}")
 
-        print(f"\n  Batch {batch_num}: requesting {batch_size} examples "
-              f"({total}/{target_count} done)...")
+    for task in tasks:
+        output_file = OUTPUT_DIR / f"{task}_synthetic.jsonl"
 
-        try:
-            examples = generate_batch(client, task, seeds, batch_size)
+        # Load existing if resuming
+        existing_count = 0
+        if output_file.exists():
+            with open(output_file) as f:
+                existing_count = sum(1 for line in f if line.strip())
+            print(f"\n  [{task.upper()}] Resuming: {existing_count} already exist")
 
-            # Append to file
-            with open(output_file, "a") as f:
-                for ex in examples:
-                    f.write(json.dumps(ex) + "\n")
+        target = per_task
+        generated = existing_count
 
-            total += len(examples)
-            print(f"  Got {len(examples)} valid examples. Total: {total}")
+        print(f"\n  [{task.upper()}] Generating {target - generated} more examples...")
 
-            # Rate limiting
-            time.sleep(1)
+        for universe in universes:
+            if generated >= target:
+                break
 
-        except anthropic.RateLimitError:
-            print("  Rate limited. Waiting 30 seconds...")
-            time.sleep(30)
-        except Exception as e:
-            print(f"  Error: {e}")
-            time.sleep(5)
+            universe_target = min(per_universe_per_task, target - generated)
+            batches_needed = (universe_target + batch_size - 1) // batch_size
 
-    print(f"\n  Done! {total} examples written to {output_file}")
+            print(f"    Universe: {universe['name']}")
+
+            for batch_num in range(batches_needed):
+                if generated >= target:
+                    break
+
+                this_batch = min(batch_size, target - generated)
+
+                try:
+                    examples = generate_batch(
+                        client, universe, task, this_batch, seed_context
+                    )
+
+                    with open(output_file, "a") as f:
+                        for ex in examples:
+                            f.write(json.dumps(ex, ensure_ascii=False) + "\n")
+
+                    generated += len(examples)
+                    print(f"      Batch {batch_num + 1}: +{len(examples)} "
+                          f"(total: {generated}/{target})")
+
+                    time.sleep(0.5)  # Light rate limiting
+
+                except anthropic.RateLimitError:
+                    print("      Rate limited. Waiting 30s...")
+                    time.sleep(30)
+                except Exception as e:
+                    print(f"      Error: {e}")
+                    time.sleep(3)
+
+        print(f"  [{task.upper()}] Done: {generated} examples in {output_file}")
+
+    print(f"\n{'='*60}")
+    print(f"  RABBIT — Generation complete!")
+    print(f"  Next: python scripts/quality_filter.py --task all")
+    print(f"{'='*60}")
 
 
 # ── CLI ─────────────────────────────────────────────────────────────────────
@@ -245,38 +452,30 @@ def generate_for_task(task: str, target_count: int):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Rabbit — Generate synthetic training data via Claude API"
+        description="Rabbit — Generate universe-based synthetic training data"
     )
     parser.add_argument(
-        "--task",
-        choices=TASKS + ["all"],
-        required=True,
-        help="Which task to generate data for (or 'all')",
+        "--count", type=int, default=5000,
+        help="Total number of examples to generate (distributed across tasks)",
     )
     parser.add_argument(
-        "--count",
-        type=int,
-        default=10000,
-        help="Number of examples to generate per task (default: 10000)",
+        "--task", choices=TASKS + ["all"], default="all",
+        help="Which task to generate for (default: all)",
+    )
+    parser.add_argument(
+        "--universes", type=int, default=5,
+        help="Number of organization universes to use (default: 5, max 10)",
     )
 
     args = parser.parse_args()
 
-    # Check for API key
     if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("Error: ANTHROPIC_API_KEY environment variable not set.")
+        print("Error: ANTHROPIC_API_KEY not set.")
         print("  export ANTHROPIC_API_KEY=sk-ant-...")
         return
 
     tasks = TASKS if args.task == "all" else [args.task]
-
-    for task in tasks:
-        generate_for_task(task, args.count)
-
-    print("\n" + "=" * 60)
-    print("  RABBIT — Synthetic data generation complete!")
-    print("  Next step: python scripts/quality_filter.py")
-    print("=" * 60)
+    generate_all(args.count, tasks, args.universes)
 
 
 if __name__ == "__main__":

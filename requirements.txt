@@ -1,3 +1,9 @@
+# Data generation
 anthropic>=0.39.0
+
+# Evaluation
 httpx>=0.27.0
+
+# Fine-tuning (install on GPU machine only)
+# pip install unsloth datasets trl transformers
 datasets>=2.17.0
