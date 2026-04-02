@@ -5,6 +5,7 @@ Generates training data by creating fictional "organization universes" with:
 - Consistent cast of characters (recurring names across meetings)
 - Meeting sequences (follow-ups, decision evolution, contradictions)
 - Realistic org dynamics (scope creep, priority shifts, implicit references)
+- Diverse memory sources: meetings, Gmail, Slack, standups, calendar, notes, docs
 
 This produces connected, realistic training data — not isolated random examples.
 
@@ -21,7 +22,7 @@ import random
 import time
 from pathlib import Path
 
-import anthropic
+from openai import OpenAI, RateLimitError
 
 # ── Config ──────────────────────────────────────────────────────────────────
 
@@ -29,8 +30,40 @@ TASKS = ["intent", "extract", "triage", "expand", "answer"]
 SEED_DIR = Path("seed")
 OUTPUT_DIR = Path("data/synthetic")
 
-MODEL = "claude-sonnet-4-20250514"
-MAX_TOKENS = 8192
+MODEL = "gpt-4o-mini"  # Cost-effective for bulk generation
+MAX_TOKENS = 4096
+
+# ── Memory Source Types ─────────────────────────────────────────────────────
+
+MEMORY_SOURCES = """
+IMPORTANT: Generate examples from DIVERSE memory sources. Mix these across examples:
+
+1. MEETING TRANSCRIPTS — formal and informal meetings, standups, 1:1s, all-hands
+   Example: "Standup Mar 15. Rohit: API is 80% done. Sneha: blocked on design specs."
+
+2. GMAIL / EMAIL — forwarded emails, reply chains, cold outreach, internal threads
+   Example: "From: sarah@acme.co | Subject: Re: Q2 Contract | Hi, attaching the revised pricing..."
+
+3. SLACK MESSAGES — channel messages, DMs, threads, reactions context
+   Example: "#engineering — Karan: just pushed the fix for webhook drops. Vikram: 🎉 deploying now"
+
+4. CALENDAR EVENTS — meeting titles, descriptions, attendee lists, rescheduled events
+   Example: "Calendar: Product Review (rescheduled from Mon) | Mar 18 2-3pm | Priya, Rohit, Ananya"
+
+5. NOTES / DOCS — personal notes, shared docs, decision logs, post-mortems
+   Example: "Note to self: follow up with Amit about the ZyloTech pilot. They seemed hesitant on pricing."
+
+6. STANDUP UPDATES — daily async standups, weekly updates, progress reports
+   Example: "Farhan's weekly update: Finished cohort analysis. Template adoption up 25%. Blocked on experiment data."
+
+7. CRM / TOOL ENTRIES — deal notes, customer records, support tickets
+   Example: "CRM: Acme Corp — Stage: Negotiation — Last contact: Sarah (Mar 22) — Note: pushing for 20% discount"
+
+8. VOICE MEMO TRANSCRIPTS — quick voice notes, dictated thoughts
+   Example: "Voice memo 3:47pm: Need to remember — David wants the onboarding redesign before August renewal"
+
+Mix these naturally. Not every example needs to be a meeting transcript.
+"""
 
 # ── Organization Universe Templates ────────────────────────────────────────
 
@@ -40,7 +73,10 @@ CRITICAL RULES:
 1. You are creating data for ONE fictional organization. Keep names, projects, and context CONSISTENT across all examples.
 2. People recur across meetings. Decisions evolve. Meetings reference previous meetings.
 3. Include realistic messiness: vague references ("that thing we discussed"), contradictions, scope changes, follow-ups.
-4. Vary formality: some meetings are structured, others are casual standups or Slack-style messages.
+4. Vary formality: some meetings are structured, others are casual standups, Slack messages, or quick emails.
+5. USE DIVERSE MEMORY SOURCES — not just meeting transcripts!
+
+{memory_sources}
 
 ORGANIZATION PROFILE:
 {org_profile}
@@ -245,28 +281,30 @@ Each example: a user asks a question about their organizational memories.
 
 Make queries that reference THIS organization's people, projects, and meetings specifically.
 Include vague queries like "what about that pricing thing" and precise ones like "Who attended the March 15 standup?"
-Include queries that reference previous meetings implicitly: "that discussion from last week", "the thing Brian mentioned".""",
+Include queries that reference previous meetings implicitly: "that discussion from last week", "the thing Brian mentioned".
+Include queries about emails, Slack messages, calendar events — not just meetings.""",
 
     "extract": """Generate entity/fact extraction examples.
-Each example: raw text from a meeting, note, email, or Slack message from THIS organization.
-- "input": the raw text (meeting transcript snippet, note, email body, standup update)
+Each example: raw text from a meeting, email, Slack message, standup, calendar event, CRM note, or voice memo.
+- "input": the raw text (VARY THE SOURCE TYPE — meetings, Gmail, Slack, standups, notes, calendar, CRM)
 - "output": JSON object with keys: people, organizations, decisions, action_items, dates, topics
   - action_items format: [{{"owner": "Name", "task": "description", "due": "date/timeframe"}}]
 
 Make inputs realistic and messy — include abbreviations, incomplete sentences, casual tone.
 Reference the SAME people and projects across multiple examples.
-Include follow-up meetings where decisions reference or reverse previous ones.""",
+Include email headers ("From: ... Subject: ..."), Slack-style messages ("#channel — Name: ..."),
+calendar entries, CRM notes, and voice memo transcriptions.""",
 
     "triage": """Generate memory classification and summary examples.
 Each example: raw captured content that needs to be classified and summarized.
-- "input": raw text (meeting transcript, note, email, Slack thread, standup, decision record)
+- "input": raw text from ANY source (meeting, email, Slack, standup, calendar, note, CRM, voice memo)
 - "output": JSON object with keys: type, summary, tags
-  - type: one of: meeting, note, email, decision, action_item, update, conversation
+  - type: one of: meeting | note | email | decision | action_item | update | conversation | standup | calendar
   - summary: 1-2 sentence essence
   - tags: 3-6 lowercase keywords
 
 Make inputs vary in length (1 sentence to several paragraphs).
-Include content that references previous meetings or ongoing threads.
+Include content from diverse sources — Gmail threads, Slack channels, async standups, calendar descriptions.
 Some inputs should be follow-ups: "Following up on yesterday's discussion about...".""",
 
     "expand": """Generate query expansion examples.
@@ -280,20 +318,22 @@ Include:
 - Project references: "the slack thing", "enterprise stuff"
 - Temporal vagueness: "last week", "recently", "that meeting"
 - Implicit references: "what did we decide", "any updates", "the pricing discussion"
-- Typos and fragments: "standup tmrw?", "amit client", "bug status".""",
+- Typos and fragments: "standup tmrw?", "amit client", "bug status"
+- Source-specific: "that email from sarah", "slack thread about deploy", "calendar for tomorrow"
+- Cross-source: "everything about acme" (should search meetings AND emails AND Slack)""",
 
     "answer": """Generate conversational Q&A examples over retrieved memories.
 Each example: a question + retrieved memory context → conversational answer with citations.
 - "input": formatted as "Question: [question]\\nMemories: [1] ... [2] ... [3] ..."
 - "output": conversational answer with [1][2][3] citations, NO markdown formatting
 
-The memories should be from THIS organization — real meeting snippets, notes, decisions.
+The memories should come from DIVERSE SOURCES — mix meeting transcripts, emails, Slack messages,
+standups, calendar events, and notes as memory context.
 Include cases where:
-- Memories fully answer the question
-- Memories partially answer (some info missing)
+- Memories from different sources answer the question (email + meeting + Slack)
 - Memories show evolution/contradiction (decision changed between meetings)
-- Answer needs to synthesize across multiple meetings
-- Implicit links need to be made ("this connects to what was discussed on March 5")""",
+- Answer needs to synthesize across sources ("The email confirms what was discussed in the meeting")
+- Implicit links need to be made across time and source type""",
 }
 
 # ── Seed loading ────────────────────────────────────────────────────────────
@@ -304,8 +344,8 @@ def load_seed_context() -> str:
     context_parts = []
     for seed_file in SEED_DIR.glob("*.md"):
         content = seed_file.read_text()
-        # Take first ~2000 chars of each as examples
-        context_parts.append(f"--- {seed_file.name} (excerpt) ---\n{content[:2000]}\n")
+        # Take first ~1500 chars of each as examples
+        context_parts.append(f"--- {seed_file.name} (excerpt) ---\n{content[:1500]}\n")
     return "\n".join(context_parts)
 
 
@@ -313,7 +353,7 @@ def load_seed_context() -> str:
 
 
 def generate_batch(
-    client: anthropic.Anthropic,
+    client: OpenAI,
     org: dict,
     task: str,
     count: int,
@@ -322,6 +362,7 @@ def generate_batch(
     """Generate a batch of examples for one org universe and task."""
 
     prompt = UNIVERSE_PROMPT.format(
+        memory_sources=MEMORY_SOURCES,
         org_profile=org["name"],
         cast="\n".join(f"- {c}" for c in org["cast"]),
         projects="\n".join(f"- {p}" for p in org["projects"]),
@@ -331,25 +372,28 @@ def generate_batch(
         task_instructions=TASK_INSTRUCTIONS[task],
     )
 
-    # Add seed context for quality reference
     system = (
         "You are a training data generator for Rabbit, an AI model for organizational memory. "
         "Generate realistic, connected examples that reflect how real organizations work. "
+        "Use diverse memory sources: meetings, Gmail, Slack, standups, calendar, notes, CRM entries, voice memos. "
         "Here are examples of real organizational data for reference:\n\n"
-        f"{seed_context[:3000]}\n\n"
+        f"{seed_context[:2500]}\n\n"
         "Match this level of realism and detail. Output ONLY valid JSONL."
     )
 
-    response = client.messages.create(
+    response = client.chat.completions.create(
         model=MODEL,
         max_tokens=MAX_TOKENS,
-        system=system,
-        messages=[{"role": "user", "content": prompt}],
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt},
+        ],
     )
 
     # Parse JSONL
     examples = []
-    for line in response.content[0].text.strip().split("\n"):
+    text = response.choices[0].message.content or ""
+    for line in text.strip().split("\n"):
         line = line.strip()
         if not line or line.startswith("```"):
             continue
@@ -366,7 +410,7 @@ def generate_batch(
 def generate_all(total_count: int, tasks: list[str], num_universes: int):
     """Generate synthetic data across multiple organization universes."""
 
-    client = anthropic.Anthropic()
+    client = OpenAI()
     seed_context = load_seed_context()
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -377,10 +421,11 @@ def generate_all(total_count: int, tasks: list[str], num_universes: int):
     # Distribute count across tasks and universes
     per_task = total_count // len(tasks)
     per_universe_per_task = max(per_task // len(universes), 10)
-    batch_size = min(25, per_universe_per_task)  # API generates ~25 well per call
+    batch_size = min(30, per_universe_per_task)  # gpt-4o-mini handles ~30 per call
 
     print(f"\n{'='*60}")
     print(f"  RABBIT — Universe-Based Synthetic Data Generator")
+    print(f"  Model: {MODEL}")
     print(f"  Total target: {total_count} examples")
     print(f"  Tasks: {', '.join(tasks)}")
     print(f"  Universes: {len(universes)}")
@@ -430,9 +475,9 @@ def generate_all(total_count: int, tasks: list[str], num_universes: int):
                     print(f"      Batch {batch_num + 1}: +{len(examples)} "
                           f"(total: {generated}/{target})")
 
-                    time.sleep(0.5)  # Light rate limiting
+                    time.sleep(0.3)  # Light rate limiting
 
-                except anthropic.RateLimitError:
+                except RateLimitError:
                     print("      Rate limited. Waiting 30s...")
                     time.sleep(30)
                 except Exception as e:
@@ -466,13 +511,20 @@ def main():
         "--universes", type=int, default=5,
         help="Number of organization universes to use (default: 5, max 10)",
     )
+    parser.add_argument(
+        "--model", default=MODEL,
+        help=f"OpenAI model to use (default: {MODEL})",
+    )
 
     args = parser.parse_args()
 
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("Error: ANTHROPIC_API_KEY not set.")
-        print("  export ANTHROPIC_API_KEY=sk-ant-...")
+    if not os.environ.get("OPENAI_API_KEY"):
+        print("Error: OPENAI_API_KEY not set.")
+        print("  export OPENAI_API_KEY=sk-proj-...")
         return
+
+    global MODEL
+    MODEL = args.model
 
     tasks = TASKS if args.task == "all" else [args.task]
     generate_all(args.count, tasks, args.universes)

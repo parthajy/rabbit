@@ -1,5 +1,5 @@
 # Data generation
-anthropic>=0.39.0
+openai>=1.30.0
 
 # Evaluation
 httpx>=0.27.0

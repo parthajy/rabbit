@@ -1,11 +1,11 @@
 """
 Rabbit — Seed Converter
 Converts raw seed files (transcript.md, thread.md, copilot.md, standups.md)
-into structured JSONL training examples across all 5 tasks using Claude.
+into structured JSONL training examples across all 5 tasks using OpenAI.
 
-This uses Claude to intelligently extract training examples from your real
+This uses GPT-4o-mini to intelligently extract training examples from your real
 organizational data, producing high-quality seed examples that reflect
-actual usage patterns.
+actual usage patterns including diverse sources (meetings, email, Slack, etc.)
 
 Usage:
     python scripts/convert_seeds.py
@@ -18,9 +18,9 @@ import os
 import time
 from pathlib import Path
 
-import anthropic
+from openai import OpenAI, RateLimitError
 
-MODEL = "claude-sonnet-4-20250514"
+MODEL = "gpt-4o-mini"
 SEED_DIR = Path("seed")
 OUTPUT_DIR = Path("data/seeds")
 
@@ -36,6 +36,7 @@ For each example:
 - "output": exactly ONE word: factual | entity | temporal | synthesis | actions | history | aggregation
 
 Generate diverse queries: formal, casual, vague ("what about that pricing thing"), specific, with implicit references.
+Include queries about emails, Slack messages, and calendar events — not just meetings.
 Aim for {count} examples. Output ONLY valid JSONL.
 
 Raw data:
@@ -44,10 +45,11 @@ Raw data:
     "extract": """From the following raw organizational data, generate entity extraction training examples.
 
 For each example:
-- "input": a passage of raw text (meeting snippet, note, message) taken from or inspired by this data
+- "input": a passage of raw text (meeting snippet, email, Slack message, standup, note) taken from or inspired by this data
 - "output": JSON object with: people, organizations, decisions, action_items, dates, topics
   - action_items: [{{"owner": "Name", "task": "desc", "due": "date"}}]
 
+Vary the source type: meetings, Gmail threads, Slack messages, standups, calendar entries, CRM notes.
 Keep the input text realistic and messy. Aim for {count} examples. Output ONLY valid JSONL.
 
 Raw data:
@@ -56,13 +58,13 @@ Raw data:
     "triage": """From the following raw organizational data, generate memory classification examples.
 
 For each example:
-- "input": raw captured content (meeting transcript, note, message, standup)
+- "input": raw captured content (meeting transcript, email, Slack thread, standup, calendar event, note)
 - "output": JSON object with: type, summary, tags
-  - type: meeting | note | email | decision | action_item | update | conversation
+  - type: meeting | note | email | decision | action_item | update | conversation | standup | calendar
   - summary: 1-2 sentences
   - tags: 3-6 lowercase keywords
 
-Aim for {count} examples. Output ONLY valid JSONL.
+Vary source types across examples. Aim for {count} examples. Output ONLY valid JSONL.
 
 Raw data:
 {content}""",
@@ -74,8 +76,7 @@ For each example:
 - "output": an expanded, precise query that captures the user's likely intent
 
 Include name-only queries ("brian"), project refs ("the slack thing"), temporal vagueness ("last week"),
-implicit refs ("what did we decide"), typos ("standup tmrw?").
-
+implicit refs ("what did we decide"), typos ("standup tmrw?"), source-specific ("that email from sarah").
 Aim for {count} examples. Output ONLY valid JSONL.
 
 Raw data:
@@ -85,11 +86,10 @@ Raw data:
 
 For each example:
 - "input": "Question: [question]\\nMemories: [1] ... [2] ... [3] ..."
-  Use actual content from the data as memory context.
+  Use actual content from the data as memory context. Mix source types in the memories (meetings + emails + Slack).
 - "output": conversational answer with [1][2][3] citations, NO markdown
 
-Include cases where memories show decision evolution, partial answers, and cross-meeting synthesis.
-
+Include cases where memories show decision evolution, partial answers, and cross-source synthesis.
 Aim for {count} examples. Output ONLY valid JSONL.
 
 Raw data:
@@ -119,7 +119,7 @@ def chunk_content(content: str, max_chars: int = 6000) -> list[str]:
 
 
 def convert_chunk(
-    client: anthropic.Anthropic,
+    client: OpenAI,
     content: str,
     task: str,
     count: int,
@@ -128,15 +128,26 @@ def convert_chunk(
 
     prompt = CONVERSION_PROMPTS[task].format(content=content, count=count)
 
-    response = client.messages.create(
+    response = client.chat.completions.create(
         model=MODEL,
         max_tokens=4096,
-        system="You are converting real organizational data into training examples for Rabbit, an AI memory model. Output ONLY valid JSONL lines.",
-        messages=[{"role": "user", "content": prompt}],
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are converting real organizational data into training examples "
+                    "for Rabbit, an AI memory model. Generate examples from diverse sources: "
+                    "meetings, Gmail, Slack, standups, calendar, notes. "
+                    "Output ONLY valid JSONL lines."
+                ),
+            },
+            {"role": "user", "content": prompt},
+        ],
     )
 
     examples = []
-    for line in response.content[0].text.strip().split("\n"):
+    text = response.choices[0].message.content or ""
+    for line in text.strip().split("\n"):
         line = line.strip()
         if not line or line.startswith("```"):
             continue
@@ -163,17 +174,18 @@ def main():
 
     args = parser.parse_args()
 
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("Error: ANTHROPIC_API_KEY not set.")
+    if not os.environ.get("OPENAI_API_KEY"):
+        print("Error: OPENAI_API_KEY not set.")
+        print("  export OPENAI_API_KEY=sk-proj-...")
         return
 
-    client = anthropic.Anthropic()
+    client = OpenAI()
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     # Load all seed files
     seed_files = list(args.seed_dir.glob("*.md"))
     print(f"\n{'='*60}")
-    print(f"  RABBIT — Seed Converter")
+    print(f"  RABBIT — Seed Converter (OpenAI {MODEL})")
     print(f"  Seed files: {[f.name for f in seed_files]}")
     print(f"  Tasks: {TASKS}")
     print(f"{'='*60}")
@@ -204,9 +216,9 @@ def main():
                     )
                     all_examples.extend(examples)
                     print(f"    Chunk {i+1}/{len(chunks)}: +{len(examples)} examples")
-                    time.sleep(0.5)
+                    time.sleep(0.3)
 
-                except anthropic.RateLimitError:
+                except RateLimitError:
                     print("    Rate limited. Waiting 30s...")
                     time.sleep(30)
                 except Exception as e:
