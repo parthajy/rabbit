@@ -8,6 +8,7 @@ models/*.pt
 # Data (generated, not tracked)
 data/synthetic/
 data/filtered/
+data/external/
 
 # Python
 __pycache__/

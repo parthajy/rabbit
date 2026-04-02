@@ -14,7 +14,7 @@ from collections import Counter
 from difflib import SequenceMatcher
 from pathlib import Path
 
-TASKS = ["intent", "extract", "triage", "expand", "answer"]
+TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance"]
 
 SYNTHETIC_DIR = Path("data/synthetic")
 FILTERED_DIR = Path("data/filtered")
@@ -22,7 +22,8 @@ FILTERED_DIR = Path("data/filtered")
 # ── Task-specific validators ────────────────────────────────────────────────
 
 VALID_INTENTS = {"factual", "entity", "temporal", "synthesis", "actions", "history", "aggregation"}
-VALID_TRIAGE_TYPES = {"meeting", "note", "email", "decision", "action_item", "update", "conversation"}
+VALID_TRIAGE_TYPES = {"meeting", "note", "email", "decision", "action_item", "update", "conversation", "standup", "calendar"}
+VALID_SENTIMENTS = {"positive", "negative", "neutral", "tense", "urgent"}
 
 
 def validate_intent(example: dict) -> bool:
@@ -77,12 +78,46 @@ def validate_answer(example: dict) -> bool:
     return has_citation and not has_markdown and len(output) > 30
 
 
+def validate_summarize(example: dict) -> bool:
+    """Summary should be 2-4 sentences, reasonable length."""
+    output = example.get("output", "")
+    if isinstance(output, dict):
+        output = str(output)
+    return 30 < len(output) < 2000 and len(output) > len(example.get("input", "")) * 0.1
+
+
+def validate_sentiment(example: dict) -> bool:
+    """Sentiment output must be a single valid word."""
+    output = example.get("output", "").strip().lower()
+    return output in VALID_SENTIMENTS
+
+
+def validate_importance(example: dict) -> bool:
+    """Importance must have score (1-5) and reason."""
+    output = example.get("output", "")
+    if isinstance(output, str):
+        try:
+            output = json.loads(output)
+        except json.JSONDecodeError:
+            return False
+
+    if not isinstance(output, dict):
+        return False
+    score = output.get("score")
+    if not isinstance(score, (int, float)) or score < 1 or score > 5:
+        return False
+    return "reason" in output and len(str(output["reason"])) > 5
+
+
 VALIDATORS = {
     "intent": validate_intent,
     "extract": validate_extract,
     "triage": validate_triage,
     "expand": validate_expand,
     "answer": validate_answer,
+    "summarize": validate_summarize,
+    "sentiment": validate_sentiment,
+    "importance": validate_importance,
 }
 
 # ── Deduplication ───────────────────────────────────────────────────────────

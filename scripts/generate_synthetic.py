@@ -29,7 +29,7 @@ from openai import OpenAI, RateLimitError
 
 # ── Config ──────────────────────────────────────────────────────────────────
 
-TASKS = ["intent", "extract", "triage", "expand", "answer"]
+TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance"]
 SEED_DIR = Path("seed")
 OUTPUT_DIR = Path("data/synthetic")
 
@@ -337,6 +337,44 @@ Include cases where:
 - Memories show evolution/contradiction (decision changed between meetings)
 - Answer needs to synthesize across sources ("The email confirms what was discussed in the meeting")
 - Implicit links need to be made across time and source type""",
+
+    "summarize": """Generate standalone summary examples.
+Each example: raw content from a meeting, email, Slack thread, standup, or note.
+- "input": the raw text (from ANY source — meetings, Gmail, Slack, standups, notes, calendar, CRM)
+- "output": a rich 2-4 sentence standalone summary that captures the essence, key decisions, and action items
+
+This is different from triage (which classifies + gives a quick summary).
+Summarize creates a RICHER summary that could be shown directly to a user.
+Include: what happened, who was involved, what was decided, what needs to happen next.
+Vary length and complexity of inputs.""",
+
+    "sentiment": """Generate tone/sentiment classification examples.
+Each example: raw content from organizational communication.
+- "input": the raw text (meeting snippet, email, Slack message, standup, note)
+- "output": exactly ONE word: positive | negative | neutral | tense | urgent
+
+Include:
+- positive: celebrations, good news, agreement, enthusiasm
+- negative: complaints, frustration, bad results, conflict
+- neutral: status updates, routine info, factual reporting
+- tense: disagreements, deadline pressure, conflicting opinions
+- urgent: critical bugs, time-sensitive requests, escalations
+
+Vary the subtlety — some should be obviously angry, others subtly tense.""",
+
+    "importance": """Generate importance scoring examples.
+Each example: raw content that needs an importance score.
+- "input": the raw text (meeting, email, Slack, standup, note, decision log)
+- "output": JSON object with "score" (integer 1-5) and "reason" (one sentence)
+
+Scoring guide:
+- 5: Company-changing decisions (fundraise, pivot, major client, hiring key person)
+- 4: Team-level decisions (architecture changes, sprint priorities, feature launches)
+- 3: Regular updates with some decisions (standup blockers, client feedback, bug fixes)
+- 2: Routine communication (status updates, FYIs, scheduling)
+- 1: Noise (auto-generated, trivial, no actionable content)
+
+Include plenty of 2s and 3s — most real org memory is mid-importance, not everything is critical.""",
 }
 
 # ── Seed loading ────────────────────────────────────────────────────────────

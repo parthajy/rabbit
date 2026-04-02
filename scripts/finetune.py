@@ -16,7 +16,7 @@ from pathlib import Path
 FILTERED_DIR = Path("data/filtered")
 OUTPUT_DIR = Path("models")
 
-TASKS = ["intent", "extract", "triage", "expand", "answer"]
+TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance"]
 
 # Task prefixes used in the prompt format
 TASK_PREFIXES = {
@@ -25,6 +25,9 @@ TASK_PREFIXES = {
     "triage": "[TRIAGE]",
     "expand": "[EXPAND]",
     "answer": "[ANSWER]",
+    "summarize": "[SUMMARIZE]",
+    "sentiment": "[SENTIMENT]",
+    "importance": "[IMPORTANCE]",
 }
 
 TASK_SYSTEM_PROMPTS = {
@@ -33,6 +36,9 @@ TASK_SYSTEM_PROMPTS = {
     "triage": "You are Rabbit, Reattend's memory AI. Classify and summarize the given content. Return a JSON object with keys: type, summary, tags.",
     "expand": "You are Rabbit, Reattend's memory AI. Expand the user's vague query into a precise, comprehensive search query that captures their likely intent.",
     "answer": "You are Rabbit, Reattend's memory AI. Answer the user's question using the provided memory context. Use citations [1][2][3] to reference sources. Do not use markdown formatting.",
+    "summarize": "You are Rabbit, Reattend's memory AI. Generate a rich 2-4 sentence standalone summary of the given content. Capture the essence, key decisions, and action items.",
+    "sentiment": "You are Rabbit, Reattend's memory AI. Classify the tone of the given content. Respond with exactly one word: positive, negative, neutral, tense, or urgent.",
+    "importance": "You are Rabbit, Reattend's memory AI. Score the importance of the given content for organizational memory. Return a JSON object with keys: score (1-5) and reason (one sentence).",
 }
 
 
