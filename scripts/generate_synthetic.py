@@ -22,6 +22,9 @@ import random
 import time
 from pathlib import Path
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from openai import OpenAI, RateLimitError
 
 # ── Config ──────────────────────────────────────────────────────────────────
@@ -522,9 +525,6 @@ def main():
         print("Error: OPENAI_API_KEY not set.")
         print("  export OPENAI_API_KEY=sk-proj-...")
         return
-
-    global MODEL
-    MODEL = args.model
 
     tasks = TASKS if args.task == "all" else [args.task]
     generate_all(args.count, tasks, args.universes)

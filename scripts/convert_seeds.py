@@ -18,6 +18,9 @@ import os
 import time
 from pathlib import Path
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from openai import OpenAI, RateLimitError
 
 MODEL = "gpt-4o-mini"
@@ -97,7 +100,7 @@ Raw data:
 }
 
 
-def chunk_content(content: str, max_chars: int = 6000) -> list[str]:
+def chunk_content(content: str, max_chars: int = 3000) -> list[str]:
     """Split content into chunks that fit in API calls."""
     lines = content.split("\n")
     chunks = []
@@ -131,6 +134,7 @@ def convert_chunk(
     response = client.chat.completions.create(
         model=MODEL,
         max_tokens=4096,
+        timeout=60,
         messages=[
             {
                 "role": "system",
