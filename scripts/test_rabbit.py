@@ -44,10 +44,11 @@ print("=" * 60)
 for prefix, inp in tests:
     task = prefix.strip("[]").lower()
     msgs = [{"role": "system", "content": SP[task]}, {"role": "user", "content": f"{prefix} {inp}"}]
-    ids = tok.apply_chat_template(msgs, tokenize=True, add_generation_prompt=True, return_tensors="pt").to(model.device)
+    inputs = tok.apply_chat_template(msgs, tokenize=True, add_generation_prompt=True, return_tensors="pt", return_dict=True).to(model.device)
+    input_len = inputs["input_ids"].shape[-1]
     with torch.no_grad():
-        out = model.generate(input_ids=ids, max_new_tokens=256, temperature=0.1, do_sample=True)
-    resp = tok.decode(out[0][ids.shape[-1]:], skip_special_tokens=True)
+        out = model.generate(**inputs, max_new_tokens=256, temperature=0.1, do_sample=True)
+    resp = tok.decode(out[0][input_len:], skip_special_tokens=True)
     print(f"\n--- {prefix} ---")
     print(f"In:  {inp[:80]}")
     print(f"Out: {resp}")
