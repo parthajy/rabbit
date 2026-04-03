@@ -8,17 +8,19 @@ from transformers import TrainingArguments
 DATA_DIR = Path("/workspace/rabbit/data/filtered")
 OUTPUT_PATH = "/workspace/rabbit-v1"
 GGUF_PATH = "/workspace/rabbit-v1-gguf"
-TASKS = ["intent","extract","triage","expand","answer","summarize","sentiment","importance"]
-TASK_PREFIXES = {"intent":"[INTENT]","extract":"[EXTRACT]","triage":"[TRIAGE]","expand":"[EXPAND]","answer":"[ANSWER]","summarize":"[SUMMARIZE]","sentiment":"[SENTIMENT]","importance":"[IMPORTANCE]"}
+TASKS = ["intent","extract","triage","expand","answer","summarize","sentiment","importance","multiturn","dontknow"]
+TASK_PREFIXES = {"intent":"[INTENT]","extract":"[EXTRACT]","triage":"[TRIAGE]","expand":"[EXPAND]","answer":"[ANSWER]","summarize":"[SUMMARIZE]","sentiment":"[SENTIMENT]","importance":"[IMPORTANCE]","multiturn":"[ANSWER]","dontknow":"[ANSWER]"}
 TASK_SYSTEM_PROMPTS = {
     "intent":"You are Rabbit, Reattend's memory AI. Classify the user's query intent. Respond with exactly one word: factual, entity, temporal, synthesis, actions, history, or aggregation.",
     "extract":"You are Rabbit, Reattend's memory AI. Extract structured information from the given text. Return a JSON object with keys: people, organizations, decisions, action_items, dates, topics.",
     "triage":"You are Rabbit, Reattend's memory AI. Classify and summarize the given content. Return a JSON object with keys: type, summary, tags.",
     "expand":"You are Rabbit, Reattend's memory AI. Expand the user's vague query into a precise, comprehensive search query that captures their likely intent.",
-    "answer":"You are Rabbit, Reattend's memory AI. Answer the user's question using the provided memory context. Use citations [1][2][3] to reference sources. Do not use markdown formatting.",
+    "answer":"You are Rabbit, Reattend's memory AI. Answer the user's question conversationally using the provided memory context. Tell a story, provide insight, cite sources as [1][2][3]. Include a Sources section and suggest Follow-up questions. Do not use markdown.",
     "summarize":"You are Rabbit, Reattend's memory AI. Generate a rich 2-4 sentence standalone summary of the given content. Capture the essence, key decisions, and action items.",
     "sentiment":"You are Rabbit, Reattend's memory AI. Classify the tone of the given content. Respond with exactly one word: positive, negative, neutral, tense, or urgent.",
     "importance":"You are Rabbit, Reattend's memory AI. Score the importance of the given content for organizational memory. Return a JSON object with keys: score (1-5) and reason (one sentence).",
+    "multiturn":"You are Rabbit, Reattend's memory AI. Continue the conversation using the provided memory context. Build on what was already discussed. Cite sources as [1][2][3]. Include Sources and Follow-up questions. Do not use markdown.",
+    "dontknow":"You are Rabbit, Reattend's memory AI. Answer the user's question using the provided memory context. If the memories don't fully answer the question, be honest about what's missing and suggest where to find it. Cite sources as [1][2][3]. Do not use markdown.",
 }
 
 print("Loading model...")

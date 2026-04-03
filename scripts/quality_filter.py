@@ -14,7 +14,7 @@ from collections import Counter
 from difflib import SequenceMatcher
 from pathlib import Path
 
-TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance"]
+TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance", "multiturn", "dontknow"]
 
 SYNTHETIC_DIR = Path("data/synthetic")
 FILTERED_DIR = Path("data/filtered")
@@ -71,11 +71,11 @@ def validate_expand(example: dict) -> bool:
 
 
 def validate_answer(example: dict) -> bool:
-    """Answer should contain citations and no markdown."""
+    """Answer should contain citations, Sources section, and no markdown."""
     output = example.get("output", "")
     has_citation = bool(re.search(r"\[\d+\]", output))
-    has_markdown = bool(re.search(r"(\*\*|##|```|- )", output))
-    return has_citation and not has_markdown and len(output) > 30
+    has_markdown = bool(re.search(r"(\*\*|##|```)", output))
+    return has_citation and not has_markdown and len(output) > 50
 
 
 def validate_summarize(example: dict) -> bool:
@@ -109,6 +109,27 @@ def validate_importance(example: dict) -> bool:
     return "reason" in output and len(str(output["reason"])) > 5
 
 
+def validate_multiturn(example: dict) -> bool:
+    """Multi-turn must have Turn 1/Turn 2 in input and Sources in output."""
+    inp = example.get("input", "")
+    output = example.get("output", "")
+    has_turns = "Turn 1" in inp or "Turn 2" in inp
+    return has_turns and len(output) > 50
+
+
+def validate_dontknow(example: dict) -> bool:
+    """Don't-know must acknowledge gaps honestly."""
+    output = example.get("output", "")
+    # Should NOT be a confident full answer — should have hedging language
+    has_honesty = any(phrase in output.lower() for phrase in [
+        "don't have", "no record", "not find", "couldn't find",
+        "missing", "not available", "no mention", "not clear",
+        "might want to", "you could", "suggest", "follow up",
+        "not enough", "partially", "limited",
+    ])
+    return has_honesty and len(output) > 30
+
+
 VALIDATORS = {
     "intent": validate_intent,
     "extract": validate_extract,
@@ -118,6 +139,8 @@ VALIDATORS = {
     "summarize": validate_summarize,
     "sentiment": validate_sentiment,
     "importance": validate_importance,
+    "multiturn": validate_multiturn,
+    "dontknow": validate_dontknow,
 }
 
 # ── Deduplication ───────────────────────────────────────────────────────────

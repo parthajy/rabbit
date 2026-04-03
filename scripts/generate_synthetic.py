@@ -29,7 +29,7 @@ from openai import OpenAI, RateLimitError
 
 # ── Config ──────────────────────────────────────────────────────────────────
 
-TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance"]
+TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance", "multiturn", "dontknow"]
 SEED_DIR = Path("seed")
 OUTPUT_DIR = Path("data/synthetic")
 
@@ -325,18 +325,41 @@ Include:
 - Source-specific: "that email from sarah", "slack thread about deploy", "calendar for tomorrow"
 - Cross-source: "everything about acme" (should search meetings AND emails AND Slack)""",
 
-    "answer": """Generate conversational Q&A examples over retrieved memories.
-Each example: a question + retrieved memory context → conversational answer with citations.
-- "input": formatted as "Question: [question]\\nMemories: [1] ... [2] ... [3] ..."
-- "output": conversational answer with [1][2][3] citations, NO markdown formatting
+    "answer": """Generate CONVERSATIONAL Q&A examples over retrieved memories.
+Each example: a question + 3-7 retrieved memory context → rich conversational answer.
+- "input": formatted as "Question: [question]\\nMemories: [1] source_type, date — content [2] ... [3] ... [4] ... [5] ..."
+- "output": a RICH conversational answer in this EXACT format:
 
-The memories should come from DIVERSE SOURCES — mix meeting transcripts, emails, Slack messages,
-standups, calendar events, and notes as memory context.
+[Narrative answer 2-4 paragraphs. Tell a STORY, don't just list facts. Add INSIGHT and REASONING.
+Use phrases like "What's interesting is...", "This suggests...", "The pattern here is...",
+"Based on these discussions...", "It's worth noting that...". Reference sources inline as [1], [2], etc.]
+
+Sources:
+[1] Source Type, Date — Brief description
+[2] Source Type, Date — Brief description
+[3] Source Type, Date — Brief description
+
+Follow-up questions:
+→ [Relevant question the user might want to ask next]
+→ [Another related question]
+→ [A deeper question that requires reasoning]
+
+RULES for the answer:
+- Sound like a smart colleague, NOT a search engine
+- Tell the STORY of what happened, with insight and reasoning
+- Include 5-7 memories in the input (not just 2-3)
+- Mix source types: meeting + email + Slack + standup + calendar
+- Add reasoning: detect patterns, contradictions, suggest next steps
+- Follow-up questions should be genuinely useful, not generic
+- NO markdown (no **, no ##, no ```)
+- ALWAYS include the Sources and Follow-up sections
+
 Include cases where:
-- Memories from different sources answer the question (email + meeting + Slack)
-- Memories show evolution/contradiction (decision changed between meetings)
-- Answer needs to synthesize across sources ("The email confirms what was discussed in the meeting")
-- Implicit links need to be made across time and source type""",
+- Decision evolved over time (freemium → reconsidered → usage-based)
+- Multiple people have different views (surface the disagreement)
+- Answer provides strategic insight ("This pattern suggests...")
+- Answer acknowledges gaps ("I found discussions about X but nothing definitive about Y")
+- Answer reasons over career, project, or organizational patterns""",
 
     "summarize": """Generate standalone summary examples.
 Each example: raw content from a meeting, email, Slack thread, standup, or note.
@@ -375,6 +398,38 @@ Scoring guide:
 - 1: Noise (auto-generated, trivial, no actionable content)
 
 Include plenty of 2s and 3s — most real org memory is mid-importance, not everything is critical.""",
+
+    "multiturn": """Generate multi-turn conversation examples over organizational memory.
+Each example simulates a user asking a question, getting an answer, then asking a FOLLOW-UP.
+- "input": formatted as:
+  "Turn 1 Question: [first question]\\nTurn 1 Answer: [first answer with citations]\\nMemories: [1]...[2]...[3]...\\nTurn 2 Question: [follow-up question]"
+- "output": a conversational answer to the follow-up that BUILDS on the previous answer.
+  The answer should reference what was already discussed and add new information.
+  Include Sources and Follow-up questions sections.
+
+The follow-up should feel natural:
+- "Tell me more about what Sarah said"
+- "When exactly was that decision made?"
+- "What happened after that meeting?"
+- "Who disagreed with that approach?"
+- "Can you compare that with what we did last quarter?"
+
+The model needs to understand CONTEXT from the previous turn.""",
+
+    "dontknow": """Generate examples where the memories DO NOT fully answer the question.
+Each example: a question + retrieved memories that are only partially relevant or not relevant.
+- "input": formatted as "Question: [question]\\nMemories: [1] ... [2] ... [3] ..."
+- "output": an honest, helpful response that:
+  1. Acknowledges what IS known from the memories
+  2. Clearly states what information is MISSING
+  3. Suggests where to find the missing info or what to search for
+
+Example outputs:
+- "I found some discussions related to pricing [1][2], but nothing specifically about the enterprise tier you're asking about. You might want to check with the sales team or look for emails from Rajesh who typically handles enterprise deals."
+- "Based on the available memories, I can see that the project was discussed in March [1], but I don't have any records of a final decision. The last update mentions it was still under review [2]. You might want to follow up with Priya who was leading this."
+
+NEVER make up information. NEVER hallucinate. Be honest about gaps.
+Include the Sources and Follow-up questions sections.""",
 }
 
 # ── Seed loading ────────────────────────────────────────────────────────────
