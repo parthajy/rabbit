@@ -243,7 +243,53 @@ Output ONLY valid JSONL lines, nothing else."""
         return []
 
 
+def generate_task(client, task, target):
+    """Generate examples for a single task. Runs in its own thread."""
+    outfile = OUTPUT_DIR / f"{task}_synthetic.jsonl"
+
+    existing = 0
+    if outfile.exists():
+        with open(outfile) as f:
+            existing = sum(1 for line in f if line.strip())
+
+    remaining = target - existing
+    if remaining <= 0:
+        print(f"  {task}: already at {existing} (target: {target}) — skipping")
+        return existing
+
+    print(f"  Starting {task}: existing={existing}, target={target}, need={remaining}")
+
+    generated = 0
+    batch_num = 0
+    lock = __import__('threading').Lock()
+
+    while generated < remaining:
+        universe = random.choice(UNIVERSES)
+        batch_size = min(25, remaining - generated)
+
+        examples = generate_batch(client, task, universe, batch_size)
+
+        if examples:
+            with lock:
+                with open(outfile, "a") as f:
+                    for ex in examples:
+                        f.write(json.dumps(ex, ensure_ascii=False) + "\n")
+
+            generated += len(examples)
+            batch_num += 1
+
+            if batch_num % 10 == 0:
+                print(f"    [{task}] Batch {batch_num}: {existing + generated}/{target}")
+
+        time.sleep(0.1)
+
+    print(f"  [{task}] DONE — {existing + generated} total")
+    return existing + generated
+
+
 def run():
+    import concurrent.futures
+
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         print("Error: OPENAI_API_KEY not set")
@@ -253,61 +299,28 @@ def run():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     total_target = sum(TASK_TARGETS.values())
-    total_generated = 0
 
     print(f"\n{'='*60}")
-    print(f"  RABBIT — Cloud Data Generator")
+    print(f"  RABBIT — Cloud Data Generator (PARALLEL)")
     print(f"  Target: {total_target:,} examples across {len(TASK_TARGETS)} tasks")
+    print(f"  Running {len(TASK_TARGETS)} tasks in parallel")
     print(f"{'='*60}\n")
 
-    for task, target in TASK_TARGETS.items():
-        outfile = OUTPUT_DIR / f"{task}_synthetic.jsonl"
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {}
+        for task, target in TASK_TARGETS.items():
+            futures[executor.submit(generate_task, client, task, target)] = task
 
-        # Count existing
-        existing = 0
-        if outfile.exists():
-            with open(outfile) as f:
-                existing = sum(1 for line in f if line.strip())
-
-        remaining = target - existing
-        if remaining <= 0:
-            print(f"  {task}: already at {existing} (target: {target}) — skipping")
-            total_generated += existing
-            continue
-
-        print(f"\n  {'─'*50}")
-        print(f"  Task: {task} | Existing: {existing} | Target: {target} | Need: {remaining}")
-        print(f"  {'─'*50}")
-
-        generated = 0
-        batch_num = 0
-
-        while generated < remaining:
-            universe = random.choice(UNIVERSES)
-            batch_size = min(25, remaining - generated)
-
-            examples = generate_batch(client, task, universe, batch_size)
-
-            if examples:
-                with open(outfile, "a") as f:
-                    for ex in examples:
-                        f.write(json.dumps(ex, ensure_ascii=False) + "\n")
-
-                generated += len(examples)
-                batch_num += 1
-
-                if batch_num % 10 == 0:
-                    print(f"    Batch {batch_num}: +{len(examples)} "
-                          f"(task total: {existing + generated}/{target})")
-
-            time.sleep(0.2)  # Rate limit courtesy
-
-        total_generated += existing + generated
-        print(f"  {task}: DONE — {existing + generated} total")
+        for future in concurrent.futures.as_completed(futures):
+            task = futures[future]
+            try:
+                count = future.result()
+                print(f"  >> {task} completed: {count}")
+            except Exception as e:
+                print(f"  >> {task} FAILED: {e}")
 
     print(f"\n{'='*60}")
     print(f"  RABBIT — Generation Complete!")
-    print(f"  Total examples: {total_generated:,}")
     print(f"{'='*60}")
 
     # Show final counts
