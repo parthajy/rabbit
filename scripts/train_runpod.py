@@ -6,8 +6,8 @@ from trl import SFTTrainer
 from transformers import TrainingArguments
 
 DATA_DIR = Path("/workspace/rabbit/data/filtered")
-OUTPUT_PATH = "/workspace/rabbit-v1"
-GGUF_PATH = "/workspace/rabbit-v1-gguf"
+OUTPUT_PATH = "/workspace/rabbit-v1.1"
+GGUF_PATH = "/workspace/rabbit-v1.1-gguf"
 TASKS = ["intent","extract","triage","expand","answer","summarize","sentiment","importance","multiturn","dontknow"]
 TASK_PREFIXES = {"intent":"[INTENT]","extract":"[EXTRACT]","triage":"[TRIAGE]","expand":"[EXPAND]","answer":"[ANSWER]","summarize":"[SUMMARIZE]","sentiment":"[SENTIMENT]","importance":"[IMPORTANCE]","multiturn":"[ANSWER]","dontknow":"[ANSWER]"}
 TASK_SYSTEM_PROMPTS = {
@@ -63,20 +63,18 @@ print(f"\nDONE! Loss: {stats.training_loss:.4f} | Time: {stats.metrics['train_ru
 print("Saving model...")
 model.save_pretrained(OUTPUT_PATH)
 tokenizer.save_pretrained(OUTPUT_PATH)
-print("Saving GGUF...")
-model.save_pretrained_gguf(GGUF_PATH, tokenizer, quantization_method="q4_k_m")
 
 print("\nTesting...")
 FastLanguageModel.for_inference(model)
-for prefix, inp in [("[INTENT]","What did we discuss with Brian last week?"),("[EXTRACT]","Met with Sarah from Acme on Tuesday. Budget confirmed at $45k."),("[EXPAND]","what about brian"),("[SENTIMENT]","This is frustrating. Nothing has changed."),("[ANSWER]","Question: What about pricing?\nMemories: [1] Mar 15 - freemium. [2] Mar 22 - costs high. [3] Mar 28 - usage-based.")]:
+for prefix, inp in [("[INTENT]","What did we discuss with Brian last week?"),("[EXTRACT]","Met with Sarah from Acme on Tuesday. Budget confirmed at $45k."),("[EXPAND]","what about brian"),("[SENTIMENT]","This is frustrating. Nothing has changed."),("[SENTIMENT]","Great news! The pilot was a success."),("[IMPORTANCE]","Emergency: production DB is down. Revenue impact $50k/hr."),("[ANSWER]","Question: What happened with the pricing decision?\nMemories: [1] Meeting Mar 15 - team decided on freemium with generous limits. [2] Email Mar 20 - Finance flagged costs as unsustainable. [3] Meeting Mar 22 - heated discussion about costs being too high. [4] Slack Mar 25 - CEO asked for alternative models. [5] Meeting Mar 28 - reversed decision, going usage-based."),("[ANSWER]","Question: What should we focus on next quarter?\nMemories: [1] Board meeting - revenue hit 2.1M ARR but growth slowed. [2] Client feedback - enterprise clients want on-prem. [3] Team retro - SMB churn increased 15%. [4] Investor call - Series A investors want enterprise traction.")]:
     task_name = prefix.strip("[]").lower()
     msgs = [{"role":"system","content":TASK_SYSTEM_PROMPTS[task_name]},{"role":"user","content":f"{prefix} {inp}"}]
     ids = tokenizer.apply_chat_template(msgs, tokenize=True, add_generation_prompt=True, return_tensors="pt").to("cuda")
-    out = model.generate(input_ids=ids, max_new_tokens=256, temperature=0.1, do_sample=True)
-    print(f"\n  {prefix}: {inp[:60]}")
+    out = model.generate(input_ids=ids, max_new_tokens=512, temperature=0.1, do_sample=True)
+    print(f"\n  {prefix}: {inp[:80]}")
     print(f"  -> {tokenizer.decode(out[0][ids.shape[-1]:], skip_special_tokens=True)}")
 
 print("\n" + "="*50)
-print("RABBIT v1 COMPLETE!")
-print(f"GGUF at: {GGUF_PATH}")
+print("RABBIT v1.1 COMPLETE!")
+print(f"Model at: {OUTPUT_PATH}")
 print("="*50)
