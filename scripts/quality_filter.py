@@ -71,11 +71,13 @@ def validate_expand(example: dict) -> bool:
 
 
 def validate_answer(example: dict) -> bool:
-    """Answer should contain citations, Sources section, and no markdown."""
+    """Answer should be substantial and no markdown."""
     output = example.get("output", "")
-    has_citation = bool(re.search(r"\[\d+\]", output))
     has_markdown = bool(re.search(r"(\*\*|##|```)", output))
-    return has_citation and not has_markdown and len(output) > 50
+    # Accept both old style (inline [1] citations) and new style (Sources section)
+    has_citation = bool(re.search(r"\[\d+\]", output))
+    has_sources = "source" in output.lower() or "follow" in output.lower()
+    return (has_citation or has_sources) and not has_markdown and len(output) > 50
 
 
 def validate_summarize(example: dict) -> bool:

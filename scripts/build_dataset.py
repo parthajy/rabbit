@@ -21,7 +21,7 @@ SYNTHETIC_DIR = Path("data/synthetic")
 FILTERED_DIR = Path("data/filtered")
 
 TASKS = ["intent", "extract", "triage", "expand", "answer",
-         "summarize", "sentiment", "importance"]
+         "summarize", "sentiment", "importance", "multiturn", "dontknow"]
 
 
 def count_examples(directory: Path) -> dict:
