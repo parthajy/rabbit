@@ -8,8 +8,8 @@ from transformers import TrainingArguments
 DATA_DIR = Path("/workspace/rabbit/data/filtered")
 OUTPUT_PATH = "/workspace/rabbit-v1.1"
 GGUF_PATH = "/workspace/rabbit-v1.1-gguf"
-TASKS = ["intent","extract","triage","expand","answer","summarize","sentiment","importance","multiturn","dontknow"]
-TASK_PREFIXES = {"intent":"[INTENT]","extract":"[EXTRACT]","triage":"[TRIAGE]","expand":"[EXPAND]","answer":"[ANSWER]","summarize":"[SUMMARIZE]","sentiment":"[SENTIMENT]","importance":"[IMPORTANCE]","multiturn":"[ANSWER]","dontknow":"[ANSWER]"}
+TASKS = ["intent","extract","triage","expand","answer","summarize","sentiment","importance","multiturn","dontknow","link","ambient"]
+TASK_PREFIXES = {"intent":"[INTENT]","extract":"[EXTRACT]","triage":"[TRIAGE]","expand":"[EXPAND]","answer":"[ANSWER]","summarize":"[SUMMARIZE]","sentiment":"[SENTIMENT]","importance":"[IMPORTANCE]","multiturn":"[ANSWER]","dontknow":"[ANSWER]","link":"[LINK]","ambient":"[AMBIENT]"}
 TASK_SYSTEM_PROMPTS = {
     "intent":"You are Rabbit, Reattend's memory AI. Classify the user's query intent. Respond with exactly one word: factual, entity, temporal, synthesis, actions, history, or aggregation.",
     "extract":"You are Rabbit, Reattend's memory AI. Extract structured information from the given text. Return a JSON object with keys: people, organizations, decisions, action_items, dates, topics.",
@@ -21,6 +21,8 @@ TASK_SYSTEM_PROMPTS = {
     "importance":"You are Rabbit, Reattend's memory AI. Score the importance of the given content for organizational memory. Return a JSON object with keys: score (1-5) and reason (one sentence).",
     "multiturn":"You are Rabbit, Reattend's memory AI. Continue the conversation using the provided memory context. Build on what was already discussed. Cite sources as [1][2][3]. Include Sources and Follow-up questions. Do not use markdown.",
     "dontknow":"You are Rabbit, Reattend's memory AI. Answer the user's question using the provided memory context. If the memories don't fully answer the question, be honest about what's missing and suggest where to find it. Cite sources as [1][2][3]. Do not use markdown.",
+    "link":"You are Rabbit, Reattend's memory AI. Given a source record and candidate records, determine which candidates are meaningfully related. Return JSON with a links array. Each link: target_id, kind (same_topic/depends_on/contradicts/continuation_of/same_people/causes/temporal), weight (0-1), explanation. Max 8 links. If none related, return {\"links\": []}.",
+    "ambient":"You are Rabbit, Reattend's memory AI. You see what the user is doing (screen text) and related memories. Decide whether to alert. Return {\"show\": false} if no alert. Or {\"show\": true, \"reason\": \"contradiction|forgotten_commitment|critical_context\", \"memory_indices\": [1,2], \"context\": \"explanation\"} if they need to know. Only alert for genuine issues.",
 }
 
 print("Loading model...")

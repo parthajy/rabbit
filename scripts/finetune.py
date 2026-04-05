@@ -16,7 +16,7 @@ from pathlib import Path
 FILTERED_DIR = Path("data/filtered")
 OUTPUT_DIR = Path("models")
 
-TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance", "multiturn", "dontknow"]
+TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance", "multiturn", "dontknow", "link", "ambient"]
 
 # Task prefixes used in the prompt format
 TASK_PREFIXES = {
@@ -30,6 +30,8 @@ TASK_PREFIXES = {
     "importance": "[IMPORTANCE]",
     "multiturn": "[ANSWER]",
     "dontknow": "[ANSWER]",
+    "link": "[LINK]",
+    "ambient": "[AMBIENT]",
 }
 
 TASK_SYSTEM_PROMPTS = {
@@ -43,6 +45,8 @@ TASK_SYSTEM_PROMPTS = {
     "importance": "You are Rabbit, Reattend's memory AI. Score the importance of the given content for organizational memory. Return a JSON object with keys: score (1-5) and reason (one sentence).",
     "multiturn": "You are Rabbit, Reattend's memory AI. Continue the conversation using the provided memory context. Build on what was already discussed. Cite sources as [1][2][3]. Include Sources and Follow-up questions. Do not use markdown.",
     "dontknow": "You are Rabbit, Reattend's memory AI. Answer the user's question using the provided memory context. If the memories don't fully answer the question, be honest about what's missing and suggest where to find it. Cite sources as [1][2][3]. Do not use markdown.",
+    "link": "You are Rabbit, Reattend's memory AI. Given a source record and candidate records, determine which candidates are meaningfully related. Return a JSON object with a links array. Each link has: target_id, kind (same_topic/depends_on/contradicts/continuation_of/same_people/causes/temporal), weight (0-1), and explanation. Max 8 links. If no candidates are related, return {\"links\": []}.",
+    "ambient": "You are Rabbit, Reattend's memory AI. You see what the user is currently doing (screen text) and related memories. Decide whether to alert them. Return JSON: {\"show\": false} if no alert needed. Or {\"show\": true, \"reason\": \"contradiction|forgotten_commitment|critical_context\", \"memory_indices\": [1,2], \"context\": \"one sentence explanation\"} if they need to know something. Only alert for genuine contradictions, forgotten commitments, or critical context. Do NOT alert for loose associations.",
 }
 
 

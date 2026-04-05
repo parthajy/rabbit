@@ -29,7 +29,7 @@ from openai import OpenAI, RateLimitError
 
 # ── Config ──────────────────────────────────────────────────────────────────
 
-TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance", "multiturn", "dontknow"]
+TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance", "multiturn", "dontknow", "link", "ambient"]
 SEED_DIR = Path("seed")
 OUTPUT_DIR = Path("data/synthetic")
 
@@ -430,6 +430,58 @@ Example outputs:
 
 NEVER make up information. NEVER hallucinate. Be honest about gaps.
 Include the Sources and Follow-up questions sections.""",
+
+    "link": """Generate memory linking examples.
+Given a source memory and 8-12 candidate memories, determine which candidates are related.
+- "input": formatted as:
+  "SOURCE RECORD:\\nTitle: [title]\\nSummary: [summary]\\n\\nCANDIDATES:\\n1. [id-1] Title1: Summary1\\n2. [id-2] Title2: Summary2\\n..."
+- "output": JSON object with "links" array. Each link has:
+  - "target_id": the candidate ID (e.g. "id-1")
+  - "kind": exactly one of: same_topic | depends_on | contradicts | continuation_of | same_people | causes | temporal
+  - "weight": float 0.0-1.0 (how strong the relationship is)
+  - "explanation": one sentence explaining why they're related
+
+Rules:
+- Max 8 links per source
+- Only create MEANINGFUL links, not loose associations
+- If no candidates are related, return {"links": []}
+- Use the EXACT kind values listed above
+- Include a mix of: some sources with many links (5-8), some with few (1-2), some with none (0)
+- Vary the link kinds — don't always use same_topic
+- contradicts: decisions that were reversed, facts that changed
+- continuation_of: follow-up meetings, email threads, ongoing discussions
+- depends_on: task blocked by another, decision waiting on data
+- causes: one event triggered another
+- temporal: happened close in time, same sprint/quarter
+
+Generate candidates from the SAME organization universe — meetings, emails, Slack, standups about the SAME projects and people.""",
+
+    "ambient": """Generate ambient recall / contradiction detection examples.
+The user is currently working (typing an email, writing a doc, chatting in Slack).
+Rabbit sees their screen text and related memories, and decides whether to alert them.
+
+- "input": formatted as:
+  "SCREEN TEXT (from [app_name]):\\n[what the user is currently typing/reading]\\n\\nRELATED MEMORIES:\\n1. [type] Title: Summary\\n2. [type] Title: Summary\\n..."
+- "output": JSON object:
+  If no alert needed: {"show": false}
+  If alert needed: {"show": true, "reason": "contradiction|forgotten_commitment|critical_context", "memory_indices": [1, 2], "context": "One precise sentence about what conflicts or what they're forgetting"}
+
+Alert types:
+- contradiction: User says X but memory says Y. Dates don't match. Facts conflict. Decisions were reversed.
+  Example: User writes "meeting on October 5th" but memory says "moved to September 15th"
+- forgotten_commitment: User is discussing a topic where they have an unfulfilled promise or deadline.
+  Example: User emails a client but memory shows they promised a deliverable last week that's overdue
+- critical_context: User is making a decision without knowing something important in their memories.
+  Example: User is pricing a deal but memory shows the client already rejected a similar price
+
+DO NOT alert if:
+- Memories are just loosely related (same topic but no actionable insight)
+- User is casually chatting
+- User clearly already knows the information
+- Alerting would be annoying, not helpful
+
+IMPORTANT: Generate ~60% "show: false" examples and ~40% "show: true" examples.
+Most screen text is NOT alert-worthy. Rabbit must learn to be quiet unless it matters.""",
 }
 
 # ── Seed loading ────────────────────────────────────────────────────────────

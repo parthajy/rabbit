@@ -14,7 +14,7 @@ from collections import Counter
 from difflib import SequenceMatcher
 from pathlib import Path
 
-TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance", "multiturn", "dontknow"]
+TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance", "multiturn", "dontknow", "link", "ambient"]
 
 SYNTHETIC_DIR = Path("data/synthetic")
 FILTERED_DIR = Path("data/filtered")
@@ -132,6 +132,59 @@ def validate_dontknow(example: dict) -> bool:
     return has_honesty and len(output) > 30
 
 
+VALID_LINK_KINDS = {"same_topic", "depends_on", "contradicts", "continuation_of", "same_people", "causes", "temporal"}
+
+
+def validate_link(example: dict) -> bool:
+    """Link output must be JSON with links array, valid kinds and weights."""
+    output = example.get("output", "")
+    if isinstance(output, str):
+        try:
+            output = json.loads(output)
+        except json.JSONDecodeError:
+            return False
+
+    if not isinstance(output, dict) or "links" not in output:
+        return False
+    links = output["links"]
+    if not isinstance(links, list):
+        return False
+    # Empty links is valid (no related candidates)
+    if len(links) == 0:
+        return True
+    # Check each link has required fields
+    for link in links:
+        if not isinstance(link, dict):
+            return False
+        if "target_id" not in link or "kind" not in link or "weight" not in link:
+            return False
+        if link.get("kind") not in VALID_LINK_KINDS:
+            return False
+        weight = link.get("weight", 0)
+        if not isinstance(weight, (int, float)) or weight < 0 or weight > 1:
+            return False
+    return len(links) <= 8
+
+
+def validate_ambient(example: dict) -> bool:
+    """Ambient output must be JSON with show field."""
+    output = example.get("output", "")
+    if isinstance(output, str):
+        try:
+            output = json.loads(output)
+        except json.JSONDecodeError:
+            return False
+
+    if not isinstance(output, dict) or "show" not in output:
+        return False
+    if output["show"] is False:
+        return True
+    if output["show"] is True:
+        return ("reason" in output and "context" in output
+                and output.get("reason") in {"contradiction", "forgotten_commitment", "critical_context"})
+    return False
+
+
 VALIDATORS = {
     "intent": validate_intent,
     "extract": validate_extract,
@@ -143,6 +196,8 @@ VALIDATORS = {
     "importance": validate_importance,
     "multiturn": validate_multiturn,
     "dontknow": validate_dontknow,
+    "link": validate_link,
+    "ambient": validate_ambient,
 }
 
 # ── Deduplication ───────────────────────────────────────────────────────────

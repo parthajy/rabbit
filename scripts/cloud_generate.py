@@ -23,6 +23,8 @@ MODEL = "gpt-4o-mini"
 
 # How many examples per task
 TASK_TARGETS = {
+    "link": 5000,
+    "ambient": 3000,
     "answer": 10000,
     "expand": 6000,
     "multiturn": 5000,
@@ -188,6 +190,18 @@ Follow-ups should be natural: "Tell me more about...", "When was that?", "Who di
   2. States what's MISSING
   3. Suggests where to find it
 Include Sources and Follow-up questions. NEVER make up info.""",
+
+    "link": """Generate memory linking examples.
+- "input": "SOURCE RECORD:\\nTitle: [title]\\nSummary: [summary]\\n\\nCANDIDATES:\\n1. [id-1] Title: Summary\\n2. [id-2] Title: Summary\\n..." (8-12 candidates)
+- "output": JSON {"links": [{"target_id":"id-1","kind":"same_topic","weight":0.85,"explanation":"Both discuss Q2 plans"}]}
+Kinds: same_topic, depends_on, contradicts, continuation_of, same_people, causes, temporal.
+Max 8 links. Include examples with 0 links (no relation), 1-2 links, and 5-8 links.
+Generate candidates from the SAME org — meetings, emails, Slack about SAME projects/people.""",
+
+    "ambient": """Generate ambient recall examples. User is working (screen text) and Rabbit has related memories.
+- "input": "SCREEN TEXT (from [app]):\\n[what user is typing/reading]\\n\\nRELATED MEMORIES:\\n1. [type] Title: Summary\\n2. ..."
+- "output": JSON. Either {"show": false} (no alert) or {"show": true, "reason": "contradiction|forgotten_commitment|critical_context", "memory_indices": [1,2], "context": "precise explanation"}
+Generate ~60% show:false, ~40% show:true. Most screen text is NOT alert-worthy.""",
 }
 
 
