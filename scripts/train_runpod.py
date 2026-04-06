@@ -6,8 +6,8 @@ from trl import SFTTrainer
 from transformers import TrainingArguments
 
 DATA_DIR = Path("/workspace/rabbit/data/filtered")
-OUTPUT_PATH = "/workspace/rabbit-v1.1"
-GGUF_PATH = "/workspace/rabbit-v1.1-gguf"
+OUTPUT_PATH = "/workspace/rabbit-v1.2"
+GGUF_PATH = "/workspace/rabbit-v1.2-gguf"
 TASKS = ["intent","extract","triage","expand","answer","summarize","sentiment","importance","multiturn","dontknow","link","ambient"]
 TASK_PREFIXES = {"intent":"[INTENT]","extract":"[EXTRACT]","triage":"[TRIAGE]","expand":"[EXPAND]","answer":"[ANSWER]","summarize":"[SUMMARIZE]","sentiment":"[SENTIMENT]","importance":"[IMPORTANCE]","multiturn":"[ANSWER]","dontknow":"[ANSWER]","link":"[LINK]","ambient":"[AMBIENT]"}
 TASK_SYSTEM_PROMPTS = {
@@ -68,7 +68,17 @@ tokenizer.save_pretrained(OUTPUT_PATH)
 
 print("\nTesting...")
 FastLanguageModel.for_inference(model)
-for prefix, inp in [("[INTENT]","What did we discuss with Brian last week?"),("[EXTRACT]","Met with Sarah from Acme on Tuesday. Budget confirmed at $45k."),("[EXPAND]","what about brian"),("[SENTIMENT]","This is frustrating. Nothing has changed."),("[SENTIMENT]","Great news! The pilot was a success."),("[IMPORTANCE]","Emergency: production DB is down. Revenue impact $50k/hr."),("[ANSWER]","Question: What happened with the pricing decision?\nMemories: [1] Meeting Mar 15 - team decided on freemium with generous limits. [2] Email Mar 20 - Finance flagged costs as unsustainable. [3] Meeting Mar 22 - heated discussion about costs being too high. [4] Slack Mar 25 - CEO asked for alternative models. [5] Meeting Mar 28 - reversed decision, going usage-based."),("[ANSWER]","Question: What should we focus on next quarter?\nMemories: [1] Board meeting - revenue hit 2.1M ARR but growth slowed. [2] Client feedback - enterprise clients want on-prem. [3] Team retro - SMB churn increased 15%. [4] Investor call - Series A investors want enterprise traction.")]:
+test_cases = [
+    ("[INTENT]","What did we discuss with Brian last week?"),
+    ("[EXTRACT]","Met with Sarah from Acme on Tuesday. Budget confirmed at $45k."),
+    ("[EXPAND]","what about brian"),
+    ("[SENTIMENT]","This is frustrating. Nothing has changed."),
+    ("[IMPORTANCE]","Emergency: production DB is down. Revenue impact $50k/hr."),
+    ("[LINK]","SOURCE RECORD:\nTitle: Pricing decision reversed\nSummary: Team reversed freemium decision, moving to usage-based pricing due to cost concerns.\n\nCANDIDATES:\n1. [id-1] Freemium launch plan: Team discussed generous free tier limits and growth projections.\n2. [id-2] Q2 hiring plan: Engineering team needs 3 more backend devs.\n3. [id-3] Cost analysis from Finance: Monthly infrastructure costs 40% over budget with freemium model.\n4. [id-4] Customer feedback survey: Enterprise clients prefer predictable pricing.\n5. [id-5] Sprint planning: Next sprint focused on payment integration."),
+    ("[AMBIENT]","SCREEN TEXT (from Gmail):\nHi Tom, confirming our meeting for October 15th to discuss the renewal at $45,000.\n\nRELATED MEMORIES:\n1. [meeting] Client call with Tom: Discussed renewal timeline, agreed on September 30th deadline.\n2. [email] Tom's email: Budget approved at $42,000 not $45,000.\n3. [note] Account notes: Tom prefers quarterly billing."),
+    ("[ANSWER]","Question: What happened with the pricing decision?\nMemories: [1] Meeting Mar 15 - team decided on freemium with generous limits. [2] Email Mar 20 - Finance flagged costs as unsustainable. [3] Meeting Mar 22 - heated discussion about costs. [4] Slack Mar 25 - CEO asked for alternatives. [5] Meeting Mar 28 - reversed decision, going usage-based."),
+]
+for prefix, inp in test_cases:
     task_name = prefix.strip("[]").lower()
     msgs = [{"role":"system","content":TASK_SYSTEM_PROMPTS[task_name]},{"role":"user","content":f"{prefix} {inp}"}]
     ids = tokenizer.apply_chat_template(msgs, tokenize=True, add_generation_prompt=True, return_tensors="pt").to("cuda")
@@ -77,6 +87,6 @@ for prefix, inp in [("[INTENT]","What did we discuss with Brian last week?"),("[
     print(f"  -> {tokenizer.decode(out[0][ids.shape[-1]:], skip_special_tokens=True)}")
 
 print("\n" + "="*50)
-print("RABBIT v1.1 COMPLETE!")
+print("RABBIT v1.2 COMPLETE!")
 print(f"Model at: {OUTPUT_PATH}")
 print("="*50)
