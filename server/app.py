@@ -79,12 +79,12 @@ def load_models():
     base = AutoModelForCausalLM.from_pretrained(
         "microsoft/Phi-3.5-mini-instruct",
         quantization_config=bnb_config,
-        device_map={"": 0},
+        device_map="auto",
     )
     tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3.5-mini-instruct")
 
     print("Loading LoRA adapters...")
-    model = PeftModel.from_pretrained(base, RABBIT_REPO, token=HF_TOKEN, device_map={"": 0})
+    model = PeftModel.from_pretrained(base, RABBIT_REPO, token=HF_TOKEN)
     model.eval()
     print(f"Rabbit loaded on {model.device}")
 
