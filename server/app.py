@@ -79,7 +79,13 @@ def load_models():
     tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3.5-mini-instruct")
 
     print("Loading LoRA adapters...")
-    model = PeftModel.from_pretrained(base, RABBIT_REPO, token=HF_TOKEN)
+    try:
+        model = PeftModel.from_pretrained(base, RABBIT_REPO, token=HF_TOKEN)
+    except KeyError:
+        # Fallback: download adapter manually and load with ignore_mismatched
+        from huggingface_hub import snapshot_download
+        local_path = snapshot_download(repo_id=RABBIT_REPO, token=HF_TOKEN)
+        model = PeftModel.from_pretrained(base, local_path, is_trainable=False)
     model.eval()
     print(f"Rabbit loaded on {model.device}")
 
