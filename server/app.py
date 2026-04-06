@@ -71,21 +71,20 @@ def load_models():
     global model, tokenizer, embed_model
 
     print("Loading Rabbit v1.2...")
+    from transformers import BitsAndBytesConfig
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_compute_dtype=torch.float16,
+    )
     base = AutoModelForCausalLM.from_pretrained(
         "microsoft/Phi-3.5-mini-instruct",
-        torch_dtype=torch.float16,
-        device_map="auto",
+        quantization_config=bnb_config,
+        device_map={"": 0},
     )
     tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3.5-mini-instruct")
 
     print("Loading LoRA adapters...")
-    try:
-        model = PeftModel.from_pretrained(base, RABBIT_REPO, token=HF_TOKEN)
-    except KeyError:
-        # Fallback: download adapter manually and load with ignore_mismatched
-        from huggingface_hub import snapshot_download
-        local_path = snapshot_download(repo_id=RABBIT_REPO, token=HF_TOKEN)
-        model = PeftModel.from_pretrained(base, local_path, is_trainable=False)
+    model = PeftModel.from_pretrained(base, RABBIT_REPO, token=HF_TOKEN, device_map={"": 0})
     model.eval()
     print(f"Rabbit loaded on {model.device}")
 
