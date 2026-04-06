@@ -334,53 +334,188 @@ Free tier is generous enough to build a real integration. Pro is cheap enough fo
 
 ---
 
+## Current Infrastructure Status
+
+| Component | On Google Cloud? | Status |
+|---|---|---|
+| Rabbit LLM (3.8B, 4-bit) | YES | Live, serving API at 34.93.210.241:8000 |
+| FastEmbed (embeddings) | YES | Bundled in server, working |
+| FastAPI server | YES | Running on port 8000 |
+| Cohere Transcribe (audio) | NOT YET | Add after benchmark + swap |
+| Jina Reranker (search quality) | NOT YET | Add after benchmark + swap |
+| ColPali (visual docs) | NOT YET | Future addition |
+| BGE-M3 (multilingual embed) | NOT YET | Future, for enterprise |
+
+All future models fit on the same T4 GPU (16GB VRAM total, ~9GB used after all additions).
+
+---
+
+## v1.3 Engineering Features (No Retraining Needed)
+
+These are code features in Reattend built ON TOP of Rabbit's existing signals.
+
+### 1. Compile on Ingest
+
+**What:** When a memory arrives, Rabbit updates pre-built entity/topic pages immediately.
+**Why:** 90% of queries become instant reads (10ms) instead of real-time synthesis (5-45s).
+**How:** Uses EXTRACT + SUMMARIZE + LINK signals already in Rabbit.
+**Where:** New code in Reattend's ingestion pipeline.
+
+### 2. Answers Become Knowledge
+
+**What:** When Rabbit generates a great synthesis, save it as a compiled memory.
+**Why:** Knowledge compounds. Same question never recomputed.
+**How:** ANSWER output scored → if quality > 0.8 → saved with source links.
+**Where:** New logic in Reattend's ask route.
+
+### 3. Lint Pass (Self-Healing Knowledge Base)
+
+**What:** Daily background job scans entire knowledge base.
+**Why:** Catches contradictions, stale info, missing links, orphan memories.
+**How:** Uses AMBIENT + LINK + ANSWER signals already in Rabbit.
+**Where:** New cron job in Reattend.
+**Output:** Daily report to workspace admin.
+
+---
+
+## Benchmarking Strategy
+
+### Who Benchmarks?
+
+**We do it ourselves first (internal benchmark).** Then validate with third parties.
+
+#### Internal Benchmark (This Week)
+
+We build a Python script that sends identical inputs to 3 providers:
+- Rabbit (our model, http://34.93.210.241:8000)
+- Groq (llama-3.3-70b, current Reattend provider)
+- OpenAI (gpt-4o-mini, current Reattend provider)
+
+50 test cases covering all signal types. Human scoring (Partha rates 1-5).
+
+**This is standard practice.** Every AI company benchmarks internally first. OpenAI, Anthropic, Google all self-benchmark before publishing.
+
+#### Third-Party Validation (Month 2-3)
+
+| Platform | What It Does | Cost | How To Use |
+|---|---|---|---|
+| **Hugging Face Open LLM Leaderboard** | Standard benchmarks (MMLU, HellaSwag, etc.) | Free | Submit model for general benchmarks. Rabbit will rank low on general tasks (expected) but shows we're a real model. |
+| **LMSys Chatbot Arena** | Blind human comparison | Free | Submit Rabbit for human preference ranking. Users compare answers without knowing which model is which. |
+| **Custom eval on Reattend data** | Domain-specific benchmark | Free | Publish a "Memory Task Benchmark" dataset. Invite community to test their models. We set the benchmark others compete on. |
+| **Customer testimonials** | Real-world validation | Free | "Company X replaced Groq with Rabbit and got 15% better extraction accuracy." |
+
+#### The Smartest Benchmark Move
+
+**Create the benchmark category ourselves.** There's no standard "organizational memory benchmark" today. We create one:
+
+"MemoryBench: A Benchmark for Organizational Memory AI"
+- 500 test cases across: extraction, triage, linking, Q&A, contradiction detection
+- Publish the dataset (not the model)
+- Run all major models against it
+- Rabbit wins (because we trained for it)
+- Other companies now compete on OUR benchmark
+
+This is what every AI leader does — GLUE was created by NYU, SQuAD by Stanford, MMLU by Berkeley. We create MemoryBench by Reattend.
+
+#### What Metrics We Report
+
+| Metric | What It Measures | How We Measure |
+|---|---|---|
+| Intent accuracy | % correct classification | Compare to human-labeled ground truth |
+| Entity extraction F1 | Precision + recall of extracted entities | Compare to manually annotated entities |
+| Triage accuracy | % correct type classification | Compare to human labels |
+| Answer quality | Human preference score (1-5) | Partha scores + later user feedback |
+| Answer citation accuracy | % of citations that are correct | Manual check: does [1] actually support the claim? |
+| Contradiction detection rate | % of contradictions caught | Inject known contradictions, measure detection |
+| Link relevance | % of links that are meaningful | Manual review of linked memories |
+| Latency (P50, P95) | Response time | Measured from API logs |
+| Cost per 1K calls | Operational cost | Calculated from server costs |
+
+---
+
 ## What To Do Next (Priority Order)
 
-### This Week
+### Tomorrow (Day 1)
 
 | # | Task | Time | Outcome |
 |---|---|---|---|
-| 1 | Build benchmark comparison script | 2 hours | Know exactly where Rabbit beats/loses to Groq |
-| 2 | Run 50-query benchmark | 1 hour | Quality scorecard |
-| 3 | Fix answer latency (optimize inference) | 1 day | Get from 45s to 5-10s |
-| 4 | Set up auto-restart on GCP (systemd service) | 1 hour | Server survives reboots |
+| 1 | Build benchmark script (Rabbit vs Groq vs OpenAI, 50 queries) | 2 hours | Side-by-side comparison |
+| 2 | Run benchmark and score | 1 hour | Know exactly where Rabbit wins/loses |
+| 3 | Fix answer latency (45s → 5-10s) | 2 hours | Usable response times |
+| 4 | Set up systemd auto-restart on GCP | 1 hour | Server survives reboots/preemption |
+
+### This Week (Days 2-5)
+
+| # | Task | Time | Outcome |
+|---|---|---|---|
+| 5 | Fix benchmark gaps with targeted training data | 1-2 days | Rabbit matches Groq on weak signals |
+| 6 | Swap easy signals in Reattend (intent, sentiment, importance) | 1 day | First real traffic on Rabbit |
+| 7 | Shadow test hard signals (answer, triage, extract) | 2 days | Quality comparison in production |
+| 8 | Build rabbit.reattend.com landing page with benchmarks | 2 days | Enterprise + developer entry point |
 
 ### Next Week
 
 | # | Task | Time | Outcome |
 |---|---|---|---|
-| 5 | Swap Reattend's easy signals to Rabbit (intent, sentiment, importance) | 1 day | First real traffic on Rabbit |
-| 6 | Shadow test hard signals (answer, triage, extract) | 3 days | Compare quality in production |
-| 7 | Add feedback logging (thumbs up/down) | 1 day | Start collecting training data |
-| 8 | Build rabbit.reattend.com landing page | 2 days | Enterprise + developer entry point |
+| 9 | Add feedback logging (thumbs up/down) in Reattend | 1 day | Start collecting training data |
+| 10 | Apply to incubators (Google Accelerator, YC, NASSCOM, 100X.VC) | 2 days | Pipeline started |
+| 11 | Full swap: all signals to Rabbit, Groq as fallback only | 1 day | Rabbit is primary |
+| 12 | Start outreach to first enterprise prospect | 1 day | Revenue pipeline |
 
 ### Month 1
 
 | # | Task | Time | Outcome |
 |---|---|---|---|
-| 9 | Compile on ingest (entity pages) | 1 week | 10x faster answers |
-| 10 | Answers become knowledge | 2 days | Knowledge compounds |
-| 11 | Lint pass (self-healing KB) | 1 week | Self-maintaining knowledge base |
-| 12 | Publish "How We Built Rabbit" blog | 2 days | Developer attention |
+| 13 | Compile on ingest (entity pages) | 1 week | 10x faster answers |
+| 14 | Answers become knowledge | 2 days | Knowledge compounds |
+| 15 | Lint pass (self-healing KB) | 1 week | Self-maintaining knowledge base |
+| 16 | Publish "How We Built Rabbit" blog | 2 days | Developer attention, HN post |
+| 17 | Create MemoryBench (public benchmark dataset) | 3 days | Own the benchmark category |
 
 ### Month 2
 
 | # | Task | Time | Outcome |
 |---|---|---|---|
-| 13 | First monthly retrain from real data | 1 day | Flywheel starts |
-| 14 | Rabbit Python SDK | 3 days | Developer adoption |
-| 15 | Add Cohere Transcribe to server | 2 days | Audio → memory pipeline |
-| 16 | Add Jina Reranker | 1 day | Better search quality |
-| 17 | First enterprise pilot (free) | 1 week | Case study |
+| 18 | First monthly retrain from real data | 1 day | Flywheel starts |
+| 19 | Rabbit Python SDK | 3 days | Developer adoption |
+| 20 | Add Cohere Transcribe to GCP server | 2 days | Audio → memory pipeline |
+| 21 | Add Jina Reranker to GCP server | 1 day | Better search quality |
+| 22 | First enterprise pilot (free) | 1 week | Case study |
 
 ### Month 3
 
 | # | Task | Time | Outcome |
 |---|---|---|---|
-| 18 | Docker image for on-prem | 3 days | Enterprise product |
-| 19 | First paying enterprise customer | 2 weeks | Revenue |
-| 20 | DPO training from feedback pairs | 3 days | Quality jump |
-| 21 | Rabbit v2 (trained on real data) | 1 week | Significantly better model |
+| 23 | Docker image for on-prem | 3 days | Enterprise product |
+| 24 | First paying enterprise customer | 2 weeks | Revenue |
+| 25 | DPO training from feedback pairs | 3 days | Quality jump |
+| 26 | Rabbit v2 (trained on real user data) | 1 week | Significantly better model |
+
+---
+
+## Incubators and Funding Targets
+
+| Program | Deadline | What They Want | Our Pitch |
+|---|---|---|---|
+| **Google for Startups Accelerator (India)** | Rolling | AI/ML with traction | Own LLM, live API, real users |
+| **Y Combinator** | Next batch | Technical founders, fast execution | Built + deployed LLM in 3 days |
+| **Microsoft for Startups** | Rolling | Cloud-native startups | Portable to Azure for enterprise |
+| **NASSCOM DeepTech Club** | Quarterly | Indian deep tech | Indian-built memory LLM |
+| **Antler India** | Rolling | Pre-seed technical founders | Solo founder, working product |
+| **100X.VC** | Rolling | Indian early stage | Deep tech, enterprise revenue path |
+| **Techstars** | Batch-based | Scalable startups | API platform, infrastructure play |
+
+### How Model Updates Work (Retraining → Deployment)
+
+```
+1. Collect new training data (feedback, real queries, new synthetic)
+2. Train on RunPod A100 (~$2, ~1 hour)
+3. Upload to HuggingFace (reattend/rabbit-v1.3)
+4. SSH into GCP VM
+5. Update RABBIT_REPO env var → "reattend/rabbit-v1.3"
+6. Restart server (sudo systemctl restart rabbit)
+7. New model live. Same URL. Same API key. Clients get update automatically.
+```
 
 ---
 
@@ -433,5 +568,52 @@ Every customer after that is 98%+ gross margin.
 
 ---
 
+## Open-Source Models to Add (Future)
+
+| Model | What It Does | Size | License | When |
+|---|---|---|---|---|
+| **Cohere Transcribe** | Audio → text (better than Whisper) | 2B | Apache 2.0 | Month 2 |
+| **Jina Reranker v2** | Re-rank search results for relevance | 137M | Apache 2.0 | Month 2 |
+| **ColPali** | Visual doc understanding (PDFs, slides, charts) | 3B | MIT | Month 3 |
+| **BGE-M3** | Multilingual embeddings (100+ languages) | 567M | MIT | Month 3 (enterprise) |
+| **Florence-2** | Image captioning + OCR (whiteboards, screenshots) | 770M | MIT | Month 4 |
+
+All fit on the same T4 GPU. Total VRAM after all additions: ~13GB / 16GB available.
+
+---
+
+## Competitive Landscape
+
+| | **Rabbit** | **Glean** | **Notion AI** | **Cohere** |
+|---|---|---|---|---|
+| Owns the model | **YES** | No (rents GPT-4/Claude) | No (rents generic LLMs) | Yes |
+| Auto-captures memories | **YES** | Partial (crawls apps) | No (manual) | No (sells API) |
+| Memory graph | **YES** | No | No | No |
+| On-prem deployment | **YES** | No | No | Yes |
+| Offline capable | **YES** | No | No | N/A |
+| Memory-specialized | **YES (12 signals)** | No (generic search) | No (generic AI) | No (general purpose) |
+| Data flywheel | **YES** | No | No | Partial |
+| Price at 20K users | ~$600/month | ~$200K/month | ~$150K/month | Pay per token |
+
+---
+
+## Legal: What's Proprietary vs Open-Source
+
+| Component | License | Obligation | Proprietary? |
+|---|---|---|---|
+| Phi-3.5 Mini (base model) | MIT | Include license in codebase | Base is open, fine-tuned weights are OURS |
+| Our LoRA weights | 100% ours | None | YES — never publish |
+| Our training data | 100% ours | None | YES — never publish |
+| 12-signal architecture | 100% ours | None | YES — trade secret |
+| Cohere Transcribe | Apache 2.0 | Include license | Open source, free to use commercially |
+| FastEmbed / nomic | Apache 2.0 | Include license | Open source, free to use commercially |
+| Jina Reranker | Apache 2.0 | Include license | Open source, free to use commercially |
+
+**What we say publicly:** "Rabbit is our proprietary memory model." (True.)
+**What we say to investors:** "Built on open-source foundations with proprietary intelligence." (Smart.)
+**What we say to enterprise:** "Runs on your server. No data leaves." (Selling point.)
+
+---
+
 *Last updated: April 6, 2026*
-*Rabbit v1.2 — 12 signals, 61K training examples, live on Google Cloud*
+*Rabbit v1.2 — 12 signals, 61K training examples, live on Google Cloud at 34.93.210.241:8000*
