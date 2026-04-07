@@ -1,0 +1,36 @@
+{
+  "scores": {
+    "rabbit": 0,
+    "groq": 0,
+    "openai": 0,
+    "tie": 5
+  },
+  "total": 5,
+  "results": [
+    {
+      "signal": "extract",
+      "auto": false,
+      "score": "skip"
+    },
+    {
+      "signal": "extract",
+      "auto": false,
+      "score": "skip"
+    },
+    {
+      "signal": "extract",
+      "auto": false,
+      "score": "skip"
+    },
+    {
+      "signal": "extract",
+      "auto": false,
+      "score": "skip"
+    },
+    {
+      "signal": "extract",
+      "auto": false,
+      "score": "skip"
+    }
+  ]
+}
