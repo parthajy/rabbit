@@ -22,7 +22,16 @@ OUTPUT_DIR = Path("data/synthetic")
 MODEL = "gpt-4o-mini"
 
 # How many examples per task
+# v1.3 targets: fix quality gaps + add wiki signals
 TASK_TARGETS = {
+    "faithful_extract": 3000,
+    "formatted_answer": 3000,
+    "followup_answer": 2000,
+    "clean_json": 2000,
+    "compile": 3000,
+    "lint": 2000,
+    "compile_answer": 1000,
+    # Existing tasks — only generate if below target
     "link": 5000,
     "ambient": 3000,
     "answer": 10000,
@@ -202,6 +211,148 @@ Generate candidates from the SAME org — meetings, emails, Slack about SAME pro
 - "input": "SCREEN TEXT (from [app]):\\n[what user is typing/reading]\\n\\nRELATED MEMORIES:\\n1. [type] Title: Summary\\n2. ..."
 - "output": JSON. Either {"show": false} (no alert) or {"show": true, "reason": "contradiction|forgotten_commitment|critical_context", "memory_indices": [1,2], "context": "precise explanation"}
 Generate ~60% show:false, ~40% show:true. Most screen text is NOT alert-worthy.""",
+
+    "faithful_extract": """Generate entity extraction examples where EXACT reproduction of names, numbers, and dates is critical.
+- "input": text containing specific names, dollar amounts, dates, email addresses, phone numbers, company names
+- "output": JSON with keys: people, organizations, decisions, action_items, dates, topics
+CRITICAL RULES:
+- Every name in the output MUST appear EXACTLY as spelled in the input. Never paraphrase or abbreviate names.
+- Every number must be EXACTLY as stated. $45,000 stays $45,000, not $45K.
+- Every date must be EXACTLY as stated. "April 15" stays "April 15", not "mid-April".
+- If the input says "Sarah", output MUST say "Sarah", never "Sara" or any variant.
+- Include tricky names: Priyanka, Sreejith, Venkataraman, Muhammad, Krzyzewski — they must be reproduced exactly.
+- Include mixed formats: "$2.1M ARR", "Q2 2026", "3:30 PM IST", "v2.0.1"
+Output ONLY valid JSON. No markdown. No explanation.""",
+
+    "formatted_answer": """Generate conversational Q&A examples with PROPER FORMATTING.
+- "input": "Question: [question]\\nMemories: [1] source, date — content [2]...[3]...[4]...[5]..."
+- "output": A rich answer that MUST use this EXACT structure:
+
+[2-4 paragraphs of narrative. Use **bold** for person names first time mentioned. Use **bold** for key decisions. Cite inline as [1][2] etc.]
+
+Sources:
+[1] Source Type, Date — Brief description
+[2] Source Type, Date — Brief description
+[3] Source Type, Date — Brief description
+
+Follow-up questions:
+→ First relevant question
+→ Second relevant question
+→ Third deeper question
+
+RULES:
+- **Bold** every person name on first mention
+- **Bold** every key decision
+- Always include Sources: section with ALL cited memories
+- Always include Follow-up questions: section with exactly 3 questions prefixed with →
+- Minimum 300 words in the narrative section
+- Use reasoning: "What's interesting is...", "The pattern suggests...", "This indicates..."
+- Sound like a smart colleague telling a story, not a search engine""",
+
+    "followup_answer": """Generate answer examples specifically focused on correct Follow-up questions format.
+- "input": "Question: [question]\\nMemories: [1]...[2]...[3]..."
+- "output": answer that ALWAYS ends with:
+
+Follow-up questions:
+→ [Specific, useful question related to the topic]
+→ [Question that goes deeper into a detail mentioned]
+→ [Strategic question that requires reasoning]
+
+The follow-up questions must be:
+- Specific to the content (not generic like "What else?")
+- Genuinely useful (would help the user think deeper)
+- Varied (one factual, one analytical, one strategic)""",
+
+    "clean_json": """Generate examples for JSON-output signals where the output is PURE JSON with NO trailing text.
+Mix of extract, triage, importance, link, and ambient examples.
+- "input": varies by signal type
+- "output": ONLY valid JSON. Nothing before or after the JSON object. No explanation. No markdown.
+
+BAD output: {"score": 3, "reason": "routine update"} This is because the meeting was routine.
+GOOD output: {"score": 3, "reason": "routine update"}
+
+BAD output: ```json\\n{"links": [...]}\\n```
+GOOD output: {"links": [...]}
+
+Generate a mix of:
+- extract outputs (people, orgs, decisions JSON)
+- triage outputs (type, summary, tags JSON)
+- importance outputs (score, reason JSON)
+- link outputs (links array JSON)
+- ambient outputs (show, reason, context JSON)""",
+
+    "compile": """Generate COMPILE examples — updating an existing wiki/entity page with new information.
+- "input": "EXISTING PAGE:\\n[current entity/topic page content]\\n\\nNEW MEMORY:\\n[new information to integrate]"
+- "output": The UPDATED page content that merges the new information into the existing page.
+
+Rules:
+- Preserve all existing information that's still valid
+- Add new information in the right context
+- If new info CONTRADICTS existing info, note both: "Previously $42K (Mar 20), now updated to $45K (Apr 7)"
+- Update "Last updated" date
+- Keep the page concise but complete
+- Format: Summary paragraph, Key People, Open Items, Recent Activity, Related Topics
+
+Example input:
+EXISTING PAGE:
+Entity: Acme Corp
+Type: Organization
+Last updated: March 25, 2026
+Summary: Enterprise client discussing renewal. Primary contact Tom.
+Key People: Tom (primary)
+Open Items: Contract terms under review
+Recent Activity:
+- Mar 15: Initial renewal discussion
+- Mar 20: Tom confirmed budget approved
+
+NEW MEMORY: Meeting Apr 1 — Legal flagged a liability clause. Tom requested revised terms.
+
+Example output:
+Entity: Acme Corp
+Type: Organization
+Last updated: April 1, 2026
+Summary: Enterprise client in active renewal. Primary contact Tom. Contract terms being revised after legal review flagged a liability clause.
+Key People: Tom (primary contact), Legal team (flagged clause)
+Open Items: Revised contract terms pending, liability clause needs resolution
+Recent Activity:
+- Apr 1: Legal flagged liability clause, Tom requested revised terms
+- Mar 20: Tom confirmed budget approved
+- Mar 15: Initial renewal discussion
+Related: [Pricing Strategy], [Enterprise Clients], [Legal Reviews]""",
+
+    "lint": """Generate LINT examples — detecting issues in a knowledge base.
+- "input": "ENTITY PAGE:\\n[wiki page content]\\n\\nRECENT MEMORIES:\\n[1] ...[2] ...[3] ..."
+- "output": JSON with detected issues:
+{
+  "contradictions": [{"issue": "description", "page_says": "X", "memory_says": "Y", "memory_index": 1}],
+  "stale_items": [{"issue": "description", "date_mentioned": "YYYY-MM-DD", "status": "past_due|no_update"}],
+  "missing_links": [{"entity": "name", "mentioned_in": [1, 3], "has_page": false}],
+  "suggested_actions": ["Update page with...", "Create page for...", "Resolve contradiction about..."]
+}
+
+Generate a mix:
+- ~30% examples with contradictions (dates wrong, numbers changed, decisions reversed)
+- ~30% examples with stale info (deadlines passed, no follow-up recorded)
+- ~20% examples with missing links (people mentioned but no entity page)
+- ~20% examples with NO issues (clean knowledge base — output: all empty arrays)""",
+
+    "compile_answer": """Generate examples of converting a synthesized answer into a wiki entry.
+- "input": "QUESTION: [original question]\\nANSWER: [Rabbit's synthesized answer with citations]\\nSOURCE_IDS: [id-1, id-2, id-3]"
+- "output": JSON wiki entry:
+{
+  "title": "Short descriptive title (max 80 chars)",
+  "content": "The synthesized knowledge, rewritten as a wiki entry (not Q&A format)",
+  "category": "decisions|projects|people|strategy|operations",
+  "source_ids": ["id-1", "id-2", "id-3"],
+  "auto_update": true,
+  "keywords": ["keyword1", "keyword2"]
+}
+
+The content should be rewritten from Q&A format to wiki format:
+- Remove "Based on your question..." type phrasing
+- Write as objective knowledge: "The pricing strategy evolved from freemium to usage-based..."
+- Keep all factual information and citations
+- Make it scannable and reusable""",
 }
 
 

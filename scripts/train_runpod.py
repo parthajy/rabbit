@@ -6,10 +6,10 @@ from trl import SFTTrainer
 from transformers import TrainingArguments
 
 DATA_DIR = Path("/workspace/rabbit/data/filtered")
-OUTPUT_PATH = "/workspace/rabbit-v1.2"
-GGUF_PATH = "/workspace/rabbit-v1.2-gguf"
-TASKS = ["intent","extract","triage","expand","answer","summarize","sentiment","importance","multiturn","dontknow","link","ambient"]
-TASK_PREFIXES = {"intent":"[INTENT]","extract":"[EXTRACT]","triage":"[TRIAGE]","expand":"[EXPAND]","answer":"[ANSWER]","summarize":"[SUMMARIZE]","sentiment":"[SENTIMENT]","importance":"[IMPORTANCE]","multiturn":"[ANSWER]","dontknow":"[ANSWER]","link":"[LINK]","ambient":"[AMBIENT]"}
+OUTPUT_PATH = "/workspace/rabbit-v1.3"
+GGUF_PATH = "/workspace/rabbit-v1.3-gguf"
+TASKS = ["intent","extract","triage","expand","answer","summarize","sentiment","importance","multiturn","dontknow","link","ambient","faithful_extract","formatted_answer","followup_answer","clean_json","compile","lint","compile_answer"]
+TASK_PREFIXES = {"intent":"[INTENT]","extract":"[EXTRACT]","triage":"[TRIAGE]","expand":"[EXPAND]","answer":"[ANSWER]","summarize":"[SUMMARIZE]","sentiment":"[SENTIMENT]","importance":"[IMPORTANCE]","multiturn":"[ANSWER]","dontknow":"[ANSWER]","link":"[LINK]","ambient":"[AMBIENT]","faithful_extract":"[EXTRACT]","formatted_answer":"[ANSWER]","followup_answer":"[ANSWER]","clean_json":"[EXTRACT]","compile":"[COMPILE]","lint":"[LINT]","compile_answer":"[COMPILE]"}
 TASK_SYSTEM_PROMPTS = {
     "intent":"You are Rabbit, Reattend's memory AI. Classify the user's query intent. Respond with exactly one word: factual, entity, temporal, synthesis, actions, history, or aggregation.",
     "extract":"You are Rabbit, Reattend's memory AI. Extract structured information from the given text. Return a JSON object with keys: people, organizations, decisions, action_items, dates, topics.",
@@ -23,6 +23,13 @@ TASK_SYSTEM_PROMPTS = {
     "dontknow":"You are Rabbit, Reattend's memory AI. Answer the user's question using the provided memory context. If the memories don't fully answer the question, be honest about what's missing and suggest where to find it. Cite sources as [1][2][3]. Do not use markdown.",
     "link":"You are Rabbit, Reattend's memory AI. Given a source record and candidate records, determine which candidates are meaningfully related. Return JSON with a links array. Each link: target_id, kind (same_topic/depends_on/contradicts/continuation_of/same_people/causes/temporal), weight (0-1), explanation. Max 8 links. If none related, return {\"links\": []}.",
     "ambient":"You are Rabbit, Reattend's memory AI. You see what the user is doing (screen text) and related memories. Decide whether to alert. Return {\"show\": false} if no alert. Or {\"show\": true, \"reason\": \"contradiction|forgotten_commitment|critical_context\", \"memory_indices\": [1,2], \"context\": \"explanation\"} if they need to know. Only alert for genuine issues.",
+    "faithful_extract":"You are Rabbit, Reattend's memory AI. Extract structured information. Return JSON with keys: people, organizations, decisions, action_items, dates, topics. CRITICAL: Reproduce every name, number, and date EXACTLY as in the input. Never alter proper nouns.",
+    "formatted_answer":"You are Rabbit, Reattend's memory AI. Answer conversationally. Use **bold** for names and key decisions. Cite as [1][2][3]. MUST end with Sources: and Follow-up questions: (3 questions with →). Minimum 300 words.",
+    "followup_answer":"You are Rabbit, Reattend's memory AI. Answer using memories. Always end with Follow-up questions: section with exactly 3 questions prefixed with →.",
+    "clean_json":"You are Rabbit, Reattend's memory AI. Extract structured information. Return ONLY valid JSON. No text before or after. No markdown.",
+    "compile":"You are Rabbit, Reattend's memory AI. Update an existing wiki page with new information. Preserve valid existing info, add new details, note contradictions. Format: Summary, Key People, Open Items, Recent Activity, Related Topics.",
+    "lint":"You are Rabbit, Reattend's memory AI. Audit the knowledge base. Return JSON with: contradictions, stale_items, missing_links, suggested_actions.",
+    "compile_answer":"You are Rabbit, Reattend's memory AI. Convert a synthesized answer into a wiki entry. Return JSON with: title, content, category, source_ids, auto_update, keywords.",
 }
 
 print("Loading model...")
@@ -87,6 +94,6 @@ for prefix, inp in test_cases:
     print(f"  -> {tokenizer.decode(out[0][ids.shape[-1]:], skip_special_tokens=True)}")
 
 print("\n" + "="*50)
-print("RABBIT v1.2 COMPLETE!")
+print("RABBIT v1.3 COMPLETE!")
 print(f"Model at: {OUTPUT_PATH}")
 print("="*50)

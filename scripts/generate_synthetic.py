@@ -29,7 +29,7 @@ from openai import OpenAI, RateLimitError
 
 # ── Config ──────────────────────────────────────────────────────────────────
 
-TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance", "multiturn", "dontknow", "link", "ambient"]
+TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance", "multiturn", "dontknow", "link", "ambient", "faithful_extract", "formatted_answer", "followup_answer", "clean_json", "compile", "lint", "compile_answer"]
 SEED_DIR = Path("seed")
 OUTPUT_DIR = Path("data/synthetic")
 

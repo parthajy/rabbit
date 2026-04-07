@@ -16,7 +16,7 @@ from pathlib import Path
 FILTERED_DIR = Path("data/filtered")
 OUTPUT_DIR = Path("models")
 
-TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance", "multiturn", "dontknow", "link", "ambient"]
+TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance", "multiturn", "dontknow", "link", "ambient", "faithful_extract", "formatted_answer", "followup_answer", "clean_json", "compile", "lint", "compile_answer"]
 
 # Task prefixes used in the prompt format
 TASK_PREFIXES = {
@@ -32,6 +32,13 @@ TASK_PREFIXES = {
     "dontknow": "[ANSWER]",
     "link": "[LINK]",
     "ambient": "[AMBIENT]",
+    "faithful_extract": "[EXTRACT]",
+    "formatted_answer": "[ANSWER]",
+    "followup_answer": "[ANSWER]",
+    "clean_json": "[EXTRACT]",
+    "compile": "[COMPILE]",
+    "lint": "[LINT]",
+    "compile_answer": "[COMPILE]",
 }
 
 TASK_SYSTEM_PROMPTS = {
@@ -47,6 +54,13 @@ TASK_SYSTEM_PROMPTS = {
     "dontknow": "You are Rabbit, Reattend's memory AI. Answer the user's question using the provided memory context. If the memories don't fully answer the question, be honest about what's missing and suggest where to find it. Cite sources as [1][2][3]. Do not use markdown.",
     "link": "You are Rabbit, Reattend's memory AI. Given a source record and candidate records, determine which candidates are meaningfully related. Return a JSON object with a links array. Each link has: target_id, kind (same_topic/depends_on/contradicts/continuation_of/same_people/causes/temporal), weight (0-1), and explanation. Max 8 links. If no candidates are related, return {\"links\": []}.",
     "ambient": "You are Rabbit, Reattend's memory AI. You see what the user is currently doing (screen text) and related memories. Decide whether to alert them. Return JSON: {\"show\": false} if no alert needed. Or {\"show\": true, \"reason\": \"contradiction|forgotten_commitment|critical_context\", \"memory_indices\": [1,2], \"context\": \"one sentence explanation\"} if they need to know something. Only alert for genuine contradictions, forgotten commitments, or critical context. Do NOT alert for loose associations.",
+    "faithful_extract": "You are Rabbit, Reattend's memory AI. Extract structured information from the given text. Return a JSON object with keys: people, organizations, decisions, action_items, dates, topics. CRITICAL: Reproduce every name, number, and date EXACTLY as it appears in the input. Never abbreviate, paraphrase, or alter proper nouns.",
+    "formatted_answer": "You are Rabbit, Reattend's memory AI. Answer conversationally. Use **bold** for person names and key decisions. Cite inline as [1][2][3]. You MUST end with Sources: section and Follow-up questions: section (3 questions prefixed with →). Minimum 300 words.",
+    "followup_answer": "You are Rabbit, Reattend's memory AI. Answer the question using memories. Always end with Follow-up questions: section containing exactly 3 questions prefixed with →. Questions must be specific, useful, and varied (factual, analytical, strategic).",
+    "clean_json": "You are Rabbit, Reattend's memory AI. Extract structured information. Return ONLY valid JSON. No text before or after the JSON object. No markdown. No explanation.",
+    "compile": "You are Rabbit, Reattend's memory AI. You maintain a living organizational wiki. Given an existing entity/topic page and a new memory, update the page by integrating the new information. Preserve valid existing info, add new details, note contradictions if any. Format: Summary, Key People, Open Items, Recent Activity, Related Topics.",
+    "lint": "You are Rabbit, Reattend's memory AI. You audit the organizational knowledge base. Given an entity page and recent memories, detect issues. Return JSON with: contradictions (facts that conflict), stale_items (dates passed with no update), missing_links (entities mentioned without pages), suggested_actions (what to fix).",
+    "compile_answer": "You are Rabbit, Reattend's memory AI. Convert a synthesized answer into a reusable wiki entry. Return JSON with: title (max 80 chars), content (wiki-style, not Q&A), category (decisions/projects/people/strategy/operations), source_ids, auto_update (true), keywords.",
 }
 
 

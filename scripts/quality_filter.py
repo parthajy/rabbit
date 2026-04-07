@@ -14,7 +14,7 @@ from collections import Counter
 from difflib import SequenceMatcher
 from pathlib import Path
 
-TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance", "multiturn", "dontknow", "link", "ambient"]
+TASKS = ["intent", "extract", "triage", "expand", "answer", "summarize", "sentiment", "importance", "multiturn", "dontknow", "link", "ambient", "faithful_extract", "formatted_answer", "followup_answer", "clean_json", "compile", "lint", "compile_answer"]
 
 SYNTHETIC_DIR = Path("data/synthetic")
 FILTERED_DIR = Path("data/filtered")
@@ -185,6 +185,86 @@ def validate_ambient(example: dict) -> bool:
     return False
 
 
+def validate_faithful_extract(example: dict) -> bool:
+    """Same as extract but stricter — output names must appear in input."""
+    if not validate_extract(example):
+        return False
+    output = example.get("output", "")
+    if isinstance(output, str):
+        try:
+            output = json.loads(output)
+        except json.JSONDecodeError:
+            return False
+    inp = example.get("input", "").lower()
+    for person in output.get("people", []):
+        if person.lower() not in inp:
+            return False
+    return True
+
+
+def validate_formatted_answer(example: dict) -> bool:
+    """Answer must have bold, Sources section, and Follow-up questions."""
+    output = example.get("output", "")
+    has_bold = "**" in output
+    has_sources = "Sources:" in output or "sources:" in output
+    has_followup = "Follow-up" in output or "follow-up" in output
+    has_arrow = "→" in output
+    return has_bold and has_sources and (has_followup or has_arrow) and len(output) > 200
+
+
+def validate_followup_answer(example: dict) -> bool:
+    """Answer must end with properly formatted follow-up questions."""
+    output = example.get("output", "")
+    has_followup = "Follow-up" in output or "follow-up" in output
+    has_arrow = output.count("→") >= 2
+    return has_followup and has_arrow and len(output) > 100
+
+
+def validate_clean_json(example: dict) -> bool:
+    """Output must be pure JSON, no trailing text."""
+    output = example.get("output", "").strip()
+    if not output.startswith("{"):
+        return False
+    try:
+        json.loads(output)
+        return True
+    except json.JSONDecodeError:
+        return False
+
+
+def validate_compile(example: dict) -> bool:
+    """Compile output should be a substantial updated page."""
+    output = example.get("output", "")
+    inp = example.get("input", "")
+    return "EXISTING PAGE" in inp and len(output) > 100
+
+
+def validate_lint(example: dict) -> bool:
+    """Lint output must be JSON with issue arrays."""
+    output = example.get("output", "")
+    if isinstance(output, str):
+        try:
+            output = json.loads(output)
+        except json.JSONDecodeError:
+            return False
+    if not isinstance(output, dict):
+        return False
+    return any(key in output for key in ["contradictions", "stale_items", "missing_links", "suggested_actions"])
+
+
+def validate_compile_answer(example: dict) -> bool:
+    """Compile answer output must be JSON with title, content, category."""
+    output = example.get("output", "")
+    if isinstance(output, str):
+        try:
+            output = json.loads(output)
+        except json.JSONDecodeError:
+            return False
+    if not isinstance(output, dict):
+        return False
+    return "title" in output and "content" in output and "category" in output
+
+
 VALIDATORS = {
     "intent": validate_intent,
     "extract": validate_extract,
@@ -198,6 +278,13 @@ VALIDATORS = {
     "dontknow": validate_dontknow,
     "link": validate_link,
     "ambient": validate_ambient,
+    "faithful_extract": validate_faithful_extract,
+    "formatted_answer": validate_formatted_answer,
+    "followup_answer": validate_followup_answer,
+    "clean_json": validate_clean_json,
+    "compile": validate_compile,
+    "lint": validate_lint,
+    "compile_answer": validate_compile_answer,
 }
 
 # ── Deduplication ───────────────────────────────────────────────────────────
