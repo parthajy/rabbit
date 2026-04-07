@@ -222,7 +222,10 @@ def validate_followup_answer(example: dict) -> bool:
 
 def validate_clean_json(example: dict) -> bool:
     """Output must be pure JSON, no trailing text."""
-    output = example.get("output", "").strip()
+    output = example.get("output", "")
+    if isinstance(output, dict):
+        return True
+    output = str(output).strip()
     if not output.startswith("{"):
         return False
     try:
