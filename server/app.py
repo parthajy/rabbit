@@ -105,7 +105,7 @@ class ChatMessage(BaseModel):
 
 
 class ChatCompletionRequest(BaseModel):
-    model: str = "rabbit-v1.2"
+    model: str = "rabbit-v1.3"
     messages: list[ChatMessage]
     max_tokens: int = 512
     temperature: float = 0.1
@@ -230,7 +230,7 @@ def generate(signal: str, user_content: str, max_tokens: int = None, temperature
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "model": "rabbit-v1.2", "signals": 12}
+    return {"status": "ok", "model": "rabbit-v1.3", "signals": 12}
 
 
 @app.post("/v1/chat/completions")
@@ -263,7 +263,7 @@ def chat_completions(req: ChatCompletionRequest, key: str = Depends(verify_key))
         "id": f"rabbit-{int(time.time())}",
         "object": "chat.completion",
         "created": int(time.time()),
-        "model": "rabbit-v1.2",
+        "model": "rabbit-v1.3",
         "choices": [{
             "index": 0,
             "message": {"role": "assistant", "content": response_text},
