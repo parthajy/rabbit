@@ -25,7 +25,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 # ── Config ──────────────────────────────────────────────────────────────────
 
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
-RABBIT_REPO = os.environ.get("RABBIT_REPO", "reattend/rabbit-v1.2")
+RABBIT_REPO = os.environ.get("RABBIT_REPO", "reattend/rabbit-v1.3")
 API_KEY = os.environ.get("RABBIT_API_KEY", "rab_default_key_change_me")
 HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "8000"))
