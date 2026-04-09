@@ -101,12 +101,59 @@ Every training run documented. Never lose context on what changed and why.
 
 ---
 
-## Future Training Plans
+## v1.4 — April 9, 2026 (COMPLETE)
 
-### v1.4 (Month 2)
-- First retrain from real user data (production feedback)
-- Add Enron email + GitHub issue training data (real-world messiness)
-- Expected: significant robustness improvement
+**Data:** 82,314 filtered examples (v1.3 data + 7K faithful_extract + 2K formatted_answer + 2K clean_json)
+**Signals:** 19 task types (same as v1.3)
+**Training:** 3 full epochs, RunPod A100, ~10 hours, 29,325 steps
+**Cost:** ~$15 (training) + ~$20 (data generation)
+**Changes:**
+- 8,000 faithful extraction examples (fix hallucination)
+- 5,000 formatted answer examples (bold + sources + followups)
+- 4,000 clean JSON examples (no trailing text)
+**Deployed:** Google Cloud Mumbai (34.47.236.12:8000, static IP)
+
+### v1.4 Benchmark Results
+| Signal | Score | vs Groq |
+|---|---|---|
+| Intent | 4/5 | TIE |
+| Sentiment | 3/5 | Groq wins (4/5) |
+| Extract names | 100% faithful | TIE |
+| Extract numbers | 73% faithful | Groq slight edge |
+| Answer quality | Excellent (bold, citations, sources, followups) | Rabbit wins |
+| Answer latency | 38s | Groq wins (2s) — FIX WITH vLLM |
+| Linking | 3/4 correct, 0 false positive | Rabbit only |
+| Ambient | 2/2 correct | Rabbit only |
+| Simple signal latency | 240ms | Rabbit wins (Groq 600ms) |
+
+---
+
+## v1.5 — PLANNED (Continuous Training)
+
+**New training data target: 50,000 additional examples**
+**Total after v1.5: ~132,000 filtered examples**
+
+### What v1.5 Fixes
+| Issue | Data Needed | Priority |
+|---|---|---|
+| Sentiment edge cases (neutral/tense) | 3,000 targeted sentiment examples | HIGH |
+| Number hallucination ($, ₹, %) | 3,000 number-heavy extraction examples | HIGH |
+| Intent confusion (synthesis vs aggregation) | 1,000 intent examples | MEDIUM |
+| Longer, richer answers | 5,000 answer examples (500+ words) | MEDIUM |
+| Real-world messiness | Process 5K NexusAI memories into training pairs | HIGH |
+| Enron emails | 15,000 real corporate email examples | MEDIUM |
+| GitHub issues | 10,000 real team discussion examples | MEDIUM |
+| More compile/lint examples | 5,000 wiki signal examples | MEDIUM |
+| User feedback (when available) | Ongoing from production | FUTURE |
+
+### Training approach
+- Generate 50K in parallel on CPU pod while other work continues
+- Train v1.5 when data is ready (~1 week)
+- Monthly retraining cycle from this point forward
+
+---
+
+## Future Training Plans
 
 ### v2.0 (Month 3)
 - DPO training from thumbs up/down preference pairs
