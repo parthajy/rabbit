@@ -6,7 +6,7 @@ from trl import SFTTrainer
 from transformers import TrainingArguments
 
 DATA_DIR = Path("/workspace/rabbit/data/filtered")
-OUTPUT_PATH = "/workspace/rabbit-v1.3"
+OUTPUT_PATH = "/workspace/rabbit-v1.4"
 GGUF_PATH = "/workspace/rabbit-v1.3-gguf"
 TASKS = ["intent","extract","triage","expand","answer","summarize","sentiment","importance","multiturn","dontknow","link","ambient","faithful_extract","formatted_answer","followup_answer","clean_json","compile","lint","compile_answer"]
 TASK_PREFIXES = {"intent":"[INTENT]","extract":"[EXTRACT]","triage":"[TRIAGE]","expand":"[EXPAND]","answer":"[ANSWER]","summarize":"[SUMMARIZE]","sentiment":"[SENTIMENT]","importance":"[IMPORTANCE]","multiturn":"[ANSWER]","dontknow":"[ANSWER]","link":"[LINK]","ambient":"[AMBIENT]","faithful_extract":"[EXTRACT]","formatted_answer":"[ANSWER]","followup_answer":"[ANSWER]","clean_json":"[EXTRACT]","compile":"[COMPILE]","lint":"[LINT]","compile_answer":"[COMPILE]"}
@@ -94,6 +94,6 @@ for prefix, inp in test_cases:
     print(f"  -> {tokenizer.decode(out[0][ids.shape[-1]:], skip_special_tokens=True)}")
 
 print("\n" + "="*50)
-print("RABBIT v1.3 COMPLETE!")
+print("RABBIT v1.4 COMPLETE!")
 print(f"Model at: {OUTPUT_PATH}")
 print("="*50)
