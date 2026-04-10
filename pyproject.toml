@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rabbit-memory"
+version = "0.1.0"
+description = "Memory infrastructure for the world. Two operations: remember and ask."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Reattend", email = "hello@reattend.com"},
+]
+keywords = ["memory", "ai", "llm", "knowledge-graph", "rag", "organizational-memory"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "httpx>=0.27.0",
+]
+
+[project.optional-dependencies]
+# For running Rabbit locally (model + storage + processors)
+local = [
+    "torch>=2.0",
+    "transformers>=4.40",
+    "peft>=0.10",
+    "bitsandbytes>=0.43",
+    "fastembed>=0.3",
+    "qdrant-client>=1.9",
+]
+
+# Input processors
+audio = ["faster-whisper>=1.0"]
+pdf = ["docling>=2.0"]
+image = ["pytesseract>=0.3", "Pillow>=10.0"]
+web = ["trafilatura>=1.8"]
+calendar = ["icalendar>=5.0"]
+office = ["docling>=2.0"]
+
+# All processors
+all = [
+    "rabbit-memory[local]",
+    "rabbit-memory[audio]",
+    "rabbit-memory[pdf]",
+    "rabbit-memory[image]",
+    "rabbit-memory[web]",
+    "rabbit-memory[calendar]",
+]
+
+# Server dependencies
+server = [
+    "rabbit-memory[local]",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "python-multipart>=0.0.9",
+]
+
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+]
+
+[project.urls]
+Homepage = "https://rabbit.reattend.com"
+Documentation = "https://rabbit.reattend.com/docs"
+Repository = "https://github.com/reattend/rabbit"
+Issues = "https://github.com/reattend/rabbit/issues"
+
+[project.scripts]
+rabbit = "rabbit.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["rabbit*"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120

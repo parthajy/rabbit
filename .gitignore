@@ -10,6 +10,9 @@ data/synthetic/
 data/filtered/
 data/external/
 
+# Rabbit local data
+.rabbit/
+
 # Python
 __pycache__/
 *.py[cod]

@@ -1,277 +1,267 @@
 # Rabbit
 
-**Reattend's sovereign AI model for organizational memory.**
+**Memory infrastructure for the world.**
 
-One fine-tuned model that replaces all OpenAI and Groq dependencies in Reattend. Rabbit understands, extracts, classifies, expands, and answers — all from a single set of weights running on our own infrastructure.
+Rabbit is a fine-tuned AI that remembers everything for you. Feed it meetings, emails, notes, documents, recordings — it extracts decisions, detects contradictions, links context, and answers questions across your entire history.
 
-## What Is Rabbit?
+Two API calls. That's it.
 
-Rabbit is a single fine-tuned small language model (Phi-3.5 Mini 3.8B) trained to do every AI task Reattend needs — classification, extraction, triage, query understanding, and answer generation — running on our own $300/month server. No per-token costs. No external data exposure. Fully owned.
+```python
+from rabbit import Rabbit
 
-**The flywheel:** More users → more memory data → better fine-tuning → better Rabbit → better product → more users. This is a compounding advantage that API wrappers can never build.
+rab = Rabbit("rab_test_YOUR_KEY")
 
-This is the prerequisite for:
-- Reattend Memory API (other companies plug in our memory layer)
-- Enterprise on-premise deployment
-- Deep tech grant applications
-- "Not a wrapper" investor positioning
+rab.remember("Sarah delayed the launch to March 15. Budget is $50K.", source="meeting")
+rab.remember("Q1 revenue hit $2.3M, above target.", source="report")
+rab.remember("Tom flagged auth security concerns.", source="slack")
 
----
-
-## The 5 Tasks (One Model Does All)
-
-Each task uses a different prompt prefix. Same model weights.
-
-### 1. `[INTENT]` — Query Intent Classification
-**Input:** User's natural language question
-**Output:** One word from: `factual | entity | temporal | synthesis | actions | history | aggregation`
-**Replaces:** Groq llama-3.3-70b intent classification call
-**Latency target:** <500ms on CPU
-
-```
-Input:  "What did we discuss with Brian last week?"
-Output: synthesis
-```
-
-### 2. `[EXTRACT]` — Entity & Fact Extraction
-**Input:** Raw text (meeting transcript, note, email, Slack message)
-**Output:** Structured JSON with people, organizations, decisions, action items, dates, topics
-**Replaces:** Groq extraction call
-**Latency target:** <3 seconds on CPU
-
-```json
-Input: "Met with Sarah from Acme on Tuesday. She agreed to send the contract by Friday.
-        Budget confirmed at $45,000."
-
-Output: {
-  "people": ["Sarah"],
-  "organizations": ["Acme"],
-  "decisions": ["Budget confirmed at $45,000"],
-  "action_items": [{"owner": "Sarah", "task": "Send contract", "due": "Friday"}],
-  "dates": ["Tuesday"],
-  "topics": ["contract", "budget"]
-}
-```
-
-### 3. `[TRIAGE]` — Memory Classification & Summary
-**Input:** Raw captured content (any format)
-**Output:** Type + one-paragraph summary + tags
-**Replaces:** Groq triage call
-**Latency target:** <5 seconds on CPU (runs async, not real-time)
-
-```
-Input:  [raw meeting transcript or note]
-Output: {
-  "type": "meeting",
-  "summary": "Discussion with Acme about Q2 contract. Sarah committed to $45k budget...",
-  "tags": ["acme", "contract", "q2", "budget"]
-}
-```
-
-### 4. `[EXPAND]` — Query Expansion & Understanding
-**Input:** Short or vague user query
-**Output:** Enriched, specific query that captures what the user actually means
-**Replaces:** Groq query expansion call — THE MOST IMPORTANT TASK
-**Latency target:** <2 seconds on CPU
-
-```
-Input:  "what about brian"
-Output: "What has been discussed with Brian across all meetings and notes?
-         Include decisions made, action items assigned, and recent interactions."
-```
-
-### 5. `[ANSWER]` — Conversational Q&A Over Memories
-**Input:** User question + retrieved memory context (top N records)
-**Output:** Conversational answer with citations [1][2][3], no markdown symbols
-**Replaces:** OpenAI gpt-4o-mini final answer stream
-**Latency target:** <15 seconds on CPU, <3 seconds on GPU
-
-```
-Input:  Question: "What did we decide about the Q2 launch?"
-        Memories: [1] Meeting Mar 24... [2] Decision log Mar 18...
-Output: "The Q2 launch was set for April 15 in the March 24 meeting [1].
-         This confirmed the earlier decision on March 18 to target enterprise
-         customers first [2]."
+answer = rab.ask("What's the launch status and are there blockers?")
+print(answer.text)
+# "The launch has been delayed to March 15 by Sarah [1]. Meanwhile, Tom has
+#  raised security concerns about the auth module [3] which could be a blocker..."
 ```
 
 ---
 
-## Model Choice
+## Install
 
-**Primary: Phi-3.5 Mini Instruct (3.8B)**
-- Microsoft open-source, commercially usable
-- 4-bit quantized = ~2.5GB RAM
-- Excellent at structured output and instruction following
-- Fine-tunable with relatively small datasets
-
-**Backup: Llama 3.2 3B Instruct (Meta)**
-- Slightly faster inference
-- Slightly weaker at structured tasks
-- Use if Phi-3.5 quality is insufficient after fine-tuning
-
-**Embeddings: Already solved**
-- fastembed with nomic-embed-text-v1.5
-- Already running in production on desktop and web server
-- Do not change this
-
----
-
-## Training Data Strategy
-
-### Step 1 — Write Seed Examples (you do this)
-100 real examples per task from actual Reattend usage. These are gold standard.
-
-Files:
-- `data/seeds/intent_seeds.jsonl` — 100 examples
-- `data/seeds/extract_seeds.jsonl` — 100 examples
-- `data/seeds/triage_seeds.jsonl` — 100 examples
-- `data/seeds/expand_seeds.jsonl` — 100 examples
-- `data/seeds/answer_seeds.jsonl` — 100 examples
-
-Format for all files:
-```jsonl
-{"input": "...", "output": "..."}
-{"input": "...", "output": "..."}
+```bash
+pip install rabbit-memory
 ```
 
-### Step 2 — Generate Synthetic Data via Claude API
-Send seed examples to Claude with instruction: "Generate 500 more examples following the exact same format, quality, and diversity as these. Vary the topics, names, industries, and phrasing."
+## Get an API Key
 
-Target: 10,000 examples per task = 50,000 total
-Cost: ~$50–80 total (Claude API)
-Script: `scripts/generate_synthetic.py`
-
-### Step 3 — Quality Filter
-Automatically remove:
-- Outputs that don't match expected format
-- Duplicates (>90% string similarity)
-- Examples where output length is an outlier
-
-Target: keep 80% = ~40,000 clean examples
-
-### Step 4 — Fine-tune
-Tool: Unsloth (2x faster fine-tuning, 60% less VRAM)
-Platform: RunPod A100 ($1.99/hr)
-Time: ~6–8 hours
-Cost: ~$15–20
-Script: `scripts/finetune.py`
-
----
-
-## Infrastructure
-
-### Development / Testing
-- RunPod GPU instance (pay per hour)
-- Use for fine-tuning and initial quality testing
-- Spin up, test, spin down
-
-### Production
-- **Server:** Hetzner or DigitalOcean GPU server, ~$300/month
-- **Serving:** Ollama (simple) or vLLM (production, better batching)
-- **API format:** OpenAI-compatible (`/v1/chat/completions`) so Reattend code changes are minimal
-- **Fallback:** Groq stays in `.env` as emergency fallback, disabled by default
-
-### Reattend Integration
-The model server exposes the same interface as OpenAI. In `src/lib/ai/llm.ts`:
-- `getPreProcessingLLM()` → points to our server instead of Groq
-- `getAskLLM()` → points to our server instead of OpenAI
-- One environment variable change: `OWN_MODEL_URL=http://your-server:11434`
-
----
-
-## Rollout Plan
-
-### Week 1 — Data
-- [ ] Write 100 seed examples per task (500 total)
-- [ ] Run `generate_synthetic.py` to produce 50,000 examples
-- [ ] Review 200 random samples per task for quality
-
-### Week 2 — Fine-tune
-- [ ] Run fine-tuning on RunPod
-- [ ] Evaluate against current Groq/OpenAI outputs on 100 test cases
-- [ ] Iterate if quality gap is >20%
-
-### Week 3 — Shadow Deploy
-- [ ] Deploy model on $300 GPU server
-- [ ] Run in shadow mode (parallel to Groq, log both outputs)
-- [ ] Fix systematic failures
-
-### Week 4 — Swap
-- [ ] Route intent, extract, triage, expand → own model
-- [ ] Monitor for 1 week
-- [ ] Cut answer generation to own model if quality holds
-- [ ] Disable Groq and OpenAI keys
-
----
-
-## Quality Benchmarks (pass before swapping)
-
-| Task | Minimum accuracy vs current |
-|---|---|
-| Intent classification | >95% match |
-| Entity extraction | >85% F1 score |
-| Memory triage | >90% type accuracy |
-| Query expansion | Human eval: >80% "good" |
-| Answer generation | Human eval: >75% "good or better than current" |
-
----
-
-## Cost Comparison
-
-| Users | OpenAI + Groq | Own model ($300 server) | Monthly saving |
-|---|---|---|---|
-| 500 | ~$150 | $300 | -$150 (invest phase) |
-| 2,000 | ~$600 | $300 | +$300 |
-| 5,000 | ~$1,500 | $300 | +$1,200 |
-| 20,000 | ~$6,000 | $600 (2 servers) | +$5,400 |
-
-Break-even: ~1,500 users.
-
----
-
-## What This Enables (Beyond Cost)
-
-1. **Memory API** — expose our model as an API. Other companies pay to use our memory infrastructure. First customer target: AI meeting tools, CRMs, project management apps.
-
-2. **Enterprise on-premise** — ship the entire stack inside a client's firewall. Banks, law firms, hospitals. $50k–200k/year contracts. Impossible with OpenAI dependency.
-
-3. **Deep tech positioning** — "We built and own a specialized AI model for memory extraction and retrieval, trained on the largest dataset of organizational memory in existence." Legitimate grant applications, higher valuation multiples.
-
-4. **The flywheel** — more users → more memory data → better fine-tuning → better model → better product → more users.
-
----
-
-## Repository Structure
-
+```bash
+# Free — 1K calls/month, instant, no credit card
+curl -X POST https://rabbit.reattend.com/v1/keys/generate?tier=test
 ```
-reattend-model/
-├── README.md                    ← this file
-├── data/
-│   ├── seeds/                   ← 100 hand-written examples per task
-│   │   ├── intent_seeds.jsonl
-│   │   ├── extract_seeds.jsonl
-│   │   ├── triage_seeds.jsonl
-│   │   ├── expand_seeds.jsonl
-│   │   └── answer_seeds.jsonl
-│   ├── synthetic/               ← Claude-generated, 50k examples
-│   └── filtered/                ← quality-filtered, ready for training
-├── scripts/
-│   ├── generate_synthetic.py    ← calls Claude API to expand seeds
-│   ├── quality_filter.py        ← removes bad examples
-│   ├── finetune.py              ← Unsloth fine-tuning script
-│   ├── evaluate.py              ← compare model vs Groq/OpenAI
-│   └── serve.py                 ← local Ollama deployment helper
-├── models/
-│   └── .gitkeep                 ← model weights go here (gitignored)
-├── evals/
-│   └── test_cases.jsonl         ← 100 held-out test cases per task
-└── deployment/
-    ├── ollama_config.md         ← production server setup
-    └── llm_ts_patch.md          ← exact changes needed in src/lib/ai/llm.ts
+
+Keys look like:
+- `rab_test_*` — free tier, for testing
+- `rab_live_*` — production tier, persistent storage
+
+---
+
+## What Can It Do?
+
+### Remember anything
+
+```python
+# Text
+rab.remember("Meeting notes: we decided to postpone launch...", source="meeting")
+
+# Files — audio, PDF, DOCX, images, code, email, calendar
+rab.remember_file("quarterly_review.pdf")
+rab.remember_file("standup_recording.mp3")    # auto-transcribed
+rab.remember_file("whiteboard.jpg")           # OCR extracted
+
+# Rabbit automatically:
+# - Classifies content type (meeting, decision, task, update...)
+# - Extracts people, organizations, decisions, action items, dates
+# - Generates a rich summary
+# - Detects sentiment and importance (1-5)
+# - Creates vector embeddings for search
+# - Links to related memories in your knowledge graph
+```
+
+### Ask anything
+
+```python
+answer = rab.ask("What did we decide about the Q2 budget?")
+
+print(answer.text)        # Conversational answer with [1][2] citations
+print(answer.sources)     # Which memories were used
+print(answer.followups)   # Suggested follow-up questions
+```
+
+### Detect contradictions
+
+```python
+alert = rab.check("Let's launch on March 1st")
+# alert.show = True
+# alert.reason = "contradiction"
+# alert.context = "Sarah decided to delay to March 15 in the Q2 planning meeting"
+```
+
+### Self-healing knowledge base
+
+```python
+# Auto-compile wiki pages from memories
+wiki = rab.compile("Sarah")       # Everything known about Sarah
+wiki = rab.compile("Q2 Launch")   # All context about the launch
+
+# Audit memory health
+report = rab.lint()
+# report.contradictions = [...]   Conflicting information
+# report.stale_items = [...]      Old action items, outdated decisions
+# report.health_score = 0.87      Overall health (0-1)
 ```
 
 ---
 
-## The One-Line Vision
+## Three Ways to Run
 
-> Rabbit is the memory layer for the AI era — the same fine-tuned intelligence that powers individual recall, team knowledge, and organizational memory, running entirely on infrastructure we own.
+```python
+# 1. Hosted API (easiest)
+rab = Rabbit("rab_test_abc123")
+
+# 2. Self-hosted API (your server)
+rab = Rabbit("rab_live_xyz", base_url="https://rabbit.yourcompany.com")
+
+# 3. Fully local (no internet, model runs on your machine)
+rab = Rabbit.local(model_path="reattend/rabbit-v1.4-merged")
+```
+
+All three expose the exact same interface. Build with `rab_test`, ship with `rab_live`, go on-prem with `Rabbit.local()` — zero code changes.
+
+---
+
+## CLI
+
+```bash
+pip install rabbit-memory
+rabbit config set key rab_test_YOUR_KEY
+
+# Remember
+rabbit remember "Sarah decided to delay the launch to March 15."
+rabbit remember --file recording.mp3
+rabbit remember --file report.pdf
+
+# Ask
+rabbit ask "When is the launch?"
+
+# Check for contradictions
+rabbit check "Let's launch on March 1st"
+
+# Sync an Obsidian vault
+rabbit sync --obsidian ~/Documents/MyVault
+
+# Sync any folder
+rabbit sync --dir ~/meeting-notes/
+
+# Health
+rabbit lint
+rabbit stats
+```
+
+---
+
+## API Reference
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/v1/remember` | POST | Ingest text into memory |
+| `/v1/remember/file` | POST | Ingest a file (audio, PDF, image, etc.) |
+| `/v1/ask` | POST | Ask a question over memories |
+| `/v1/check` | POST | Detect contradictions |
+| `/v1/memories` | GET | List stored memories |
+| `/v1/memories/:id` | GET | Get a specific memory |
+| `/v1/memories/:id` | DELETE | Forget a memory |
+| `/v1/graph/:id` | GET | Get memory connections |
+| `/v1/compile/:entity` | POST | Compile wiki page |
+| `/v1/lint` | POST | Run health audit |
+| `/v1/stats` | GET | Usage statistics |
+| `/v1/keys/generate` | POST | Generate API key |
+
+---
+
+## What Rabbit Does Under the Hood
+
+When you call `rab.remember()`, Rabbit runs 7 AI signals on your content:
+
+| Signal | What It Does | Output |
+|--------|-------------|--------|
+| TRIAGE | Classifies content type | meeting, decision, task, idea... |
+| EXTRACT | Pulls structured facts | people, decisions, action items, dates |
+| SUMMARIZE | Rich standalone summary | 2-4 sentences |
+| SENTIMENT | Tone detection | positive, negative, tense, urgent |
+| IMPORTANCE | Scores 1-5 with reason | "High — contains budget decision" |
+| EMBED | Vector embedding | 768-dim vector for search |
+| LINK | Finds related memories | same_topic, contradicts, depends_on... |
+
+When you call `rab.ask()`, Rabbit runs a retrieval pipeline:
+
+1. **Intent** — Classifies your question type
+2. **Expand** — Turns vague queries into precise search
+3. **Hybrid Search** — Vector similarity + keyword matching
+4. **Graph Walk** — Follows links to find connected context
+5. **Rerank** — Picks the most relevant memories
+6. **Answer** — Generates conversational response with citations
+
+---
+
+## Supported File Types
+
+| Type | Extensions | How |
+|------|-----------|-----|
+| Audio | .mp3, .wav, .m4a, .ogg, .flac | Whisper transcription |
+| PDF | .pdf | Docling / PyPDF2 |
+| Office | .docx, .pptx, .xlsx | Docling |
+| Images | .png, .jpg, .webp | OCR (pytesseract) |
+| Markdown | .md | Native (Obsidian-compatible) |
+| HTML | .html | trafilatura |
+| Email | .eml | Built-in parser |
+| Calendar | .ics | icalendar |
+| Code | .py, .js, .ts, .go, .rs... | With language context |
+
+Install processors as needed:
+```bash
+pip install rabbit-memory[audio]      # Whisper
+pip install rabbit-memory[pdf]        # Docling
+pip install rabbit-memory[all]        # Everything
+```
+
+---
+
+## Self-Hosting
+
+```bash
+# Docker (coming soon)
+docker compose up -d
+
+# Or manually
+pip install rabbit-memory[server]
+RABBIT_MODEL=reattend/rabbit-v1.4-merged uvicorn rabbit.api.server:app --host 0.0.0.0 --port 8000
+```
+
+---
+
+## Use Cases
+
+- **Personal knowledge base** — Remember everything, find anything
+- **Team memory** — Shared context across your organization
+- **Meeting intelligence** — Upload recordings, get decisions and action items
+- **Obsidian supercharger** — Query across your entire vault
+- **Git memory** — Remember commits, PRs, issues across repos
+- **Self-healing wiki** — Knowledge base that updates itself
+- **CRM enrichment** — Remember every customer interaction
+- **Enterprise on-prem** — Knowledge graph behind your firewall
+
+---
+
+## Built With
+
+- **Phi-3.5 Mini (3.8B)** — Fine-tuned with 82K+ memory-specific examples
+- **FastEmbed** — nomic-embed-text-v1.5 for embeddings
+- **Qdrant** — Vector search with per-tenant isolation
+- **SQLite FTS5** — BM25 keyword search
+- **faster-whisper** — Audio transcription
+- **Docling** — Document parsing (PDF, DOCX, PPTX)
+
+---
+
+## Reattend
+
+Rabbit powers [Reattend](https://reattend.com) — the memory SaaS for individuals and teams. Connect Gmail, Slack, Calendar, and more. Get a dashboard, daily digests, and a self-healing knowledge base.
+
+Rabbit is the infrastructure. Reattend is the product. You can build your own product on Rabbit.
+
+---
+
+## License
+
+MIT
+
+---
+
+Built by [Reattend](https://reattend.com). Memory for the world.
