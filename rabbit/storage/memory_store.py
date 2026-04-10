@@ -120,7 +120,6 @@ class MemoryStore:
 
         try:
             from qdrant_client import QdrantClient
-            from qdrant_client.models import Distance, VectorParams
 
             qdrant_path = self.storage_path / "qdrant"
             self._qdrant_client = QdrantClient(path=str(qdrant_path))
@@ -128,6 +127,7 @@ class MemoryStore:
             # Create collection if it doesn't exist
             collections = [c.name for c in self._qdrant_client.get_collections().collections]
             if self._collection_name not in collections:
+                from qdrant_client.models import Distance, VectorParams
                 self._qdrant_client.create_collection(
                     collection_name=self._collection_name,
                     vectors_config=VectorParams(
@@ -199,14 +199,17 @@ class MemoryStore:
         # Use memory_id hash as point ID
         point_id = abs(hash(memory_id)) % (2**63)
 
-        self._qdrant_client.upsert(
-            collection_name=self._collection_name,
-            points=[PointStruct(
-                id=point_id,
-                vector=embedding,
-                payload={"memory_id": memory_id, **payload},
-            )],
-        )
+        try:
+            self._qdrant_client.upsert(
+                collection_name=self._collection_name,
+                points=[PointStruct(
+                    id=point_id,
+                    vector=embedding,
+                    payload={"memory_id": memory_id, **payload},
+                )],
+            )
+        except Exception as e:
+            print(f"[warn] Qdrant store failed: {e}")
 
     def get(self, memory_id: str) -> Memory | None:
         """Get a memory by ID."""
@@ -278,13 +281,26 @@ class MemoryStore:
         if self._qdrant_client is None:
             return []
 
-        results = self._qdrant_client.search(
-            collection_name=self._collection_name,
-            query_vector=query_embedding,
-            limit=limit,
-        )
-
-        return [(r.payload["memory_id"], r.score) for r in results]
+        try:
+            # qdrant-client >= 1.12 uses query_points
+            results = self._qdrant_client.query_points(
+                collection_name=self._collection_name,
+                query=query_embedding,
+                limit=limit,
+            )
+            return [(r.payload["memory_id"], r.score) for r in results.points]
+        except (AttributeError, ImportError, TypeError):
+            try:
+                # Fallback for older qdrant-client
+                results = self._qdrant_client.search(
+                    collection_name=self._collection_name,
+                    query_vector=query_embedding,
+                    limit=limit,
+                )
+                return [(r.payload["memory_id"], r.score) for r in results]
+            except Exception as e:
+                print(f"[warn] Qdrant search failed: {e}")
+                return []
 
     def search_bm25(self, query: str, limit: int = 20) -> list[tuple[str, float]]:
         """Search by BM25 keyword matching using FTS5."""
