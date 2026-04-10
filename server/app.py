@@ -83,7 +83,7 @@ def load_models():
         device_map="auto",
         token=HF_TOKEN,
     )
-    tokenizer = AutoTokenizer.from_pretrained(MERGED_REPO, token=HF_TOKEN)
+    tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3.5-mini-instruct")
     model.eval()
     print(f"Rabbit loaded on {model.device}")
 
