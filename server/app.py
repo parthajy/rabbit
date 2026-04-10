@@ -75,6 +75,8 @@ def load_models():
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_compute_dtype=torch.float16,
+        bnb_4bit_quant_storage=torch.float16,
+        bnb_4bit_use_double_quant=True,
     )
     MERGED_REPO = os.environ.get("RABBIT_MERGED_REPO", "reattend/rabbit-v1.4-merged")
     model = AutoModelForCausalLM.from_pretrained(
@@ -82,6 +84,7 @@ def load_models():
         quantization_config=bnb_config,
         device_map="auto",
         token=HF_TOKEN,
+        torch_dtype=torch.float16,
     )
     tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3.5-mini-instruct")
     model.eval()
