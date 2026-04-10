@@ -70,21 +70,20 @@ embed_model = None
 def load_models():
     global model, tokenizer, embed_model
 
-    print("Loading Rabbit v1.2...")
+    print("Loading Rabbit (merged, 4-bit)...")
     from transformers import BitsAndBytesConfig
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_compute_dtype=torch.float16,
     )
-    base = AutoModelForCausalLM.from_pretrained(
-        "microsoft/Phi-3.5-mini-instruct",
+    MERGED_REPO = os.environ.get("RABBIT_MERGED_REPO", "reattend/rabbit-v1.4-merged")
+    model = AutoModelForCausalLM.from_pretrained(
+        MERGED_REPO,
         quantization_config=bnb_config,
         device_map="auto",
+        token=HF_TOKEN,
     )
-    tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3.5-mini-instruct")
-
-    print("Loading LoRA adapters...")
-    model = PeftModel.from_pretrained(base, RABBIT_REPO, token=HF_TOKEN)
+    tokenizer = AutoTokenizer.from_pretrained(MERGED_REPO, token=HF_TOKEN)
     model.eval()
     print(f"Rabbit loaded on {model.device}")
 
