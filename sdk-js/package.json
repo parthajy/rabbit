@@ -1,0 +1,22 @@
+{
+  "name": "@reattend/rabbit",
+  "version": "0.1.0",
+  "description": "Memory infrastructure for the world. Two operations: remember and ask.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["memory", "ai", "llm", "knowledge-graph", "rag", "organizational-memory"],
+  "author": "Reattend <hello@reattend.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/reattend/rabbit"
+  },
+  "devDependencies": {
+    "typescript": "^5.4"
+  },
+  "files": ["dist"]
+}
