@@ -146,28 +146,35 @@ DNS: api.rabbit.reattend.com → 35.200.167.8
 - [x] CLI (9 commands)
 - [x] Deployed to GCP, tested end-to-end
 
-### Sprint 2 — Complete the Platform 🔄 IN PROGRESS
+### Sprint 2 — Complete the Platform ✅ COMPLETE (April 11)
 
-**Input processor deps (install on server + test):**
-- [ ] PDF (PyPDF2)
-- [ ] Office docs (python-docx or Docling)
-- [ ] Images/OCR (tesseract + pytesseract)
-- [ ] HTML/Web (trafilatura)
-- [ ] Calendar (icalendar)
+**Input processors (installed on server):**
+- [x] PDF (PyPDF2)
+- [x] Images/OCR (tesseract + pytesseract + Pillow)
+- [x] HTML/Web (trafilatura)
+- [x] Calendar (icalendar)
 
 **Post-processing fixes:**
-- [ ] Summary bleed: clip at `[DETAILED` or `[INSTRUCTION`
-- [ ] Triage type: strip signal prefix from type and tags
+- [x] Summary bleed: clips at `[DETAILED`, `[INSTRUCTION`, `------`
+- [x] Triage type: strips signal prefix, lowercases
+- [x] Tags: removes signal names, deduplicates
+- [x] Sentiment: clips to first word
+- [x] Importance: clamped to 1-5
 
 **Advanced retrieval:**
-- [ ] Jina Reranker integration (137M, ~500MB VRAM)
+- [x] Jina Reranker (jina-reranker-v2-base-multilingual, lazy-loaded)
 
 **Streaming + SDKs:**
-- [ ] SSE streaming for /v1/ask
-- [ ] JS/TS SDK (npm install @reattend/rabbit)
+- [x] SSE streaming for /v1/ask (stream=true)
+- [x] JS/TS SDK (@reattend/rabbit)
+
+**Intelligence:**
+- [x] Reasoning mode: `rab.ask("...", reasoning=True)` routes to Groq/OpenAI for deep analysis
+- [x] Feedback system: `rab.thumbs_up()` / `rab.thumbs_down()` → training flywheel
+- [x] POST /v1/feedback + GET /v1/feedback/stats endpoints
 
 **Deferred:**
-- [ ] ColPali (3B, 3GB VRAM) — deferred to L4 upgrade, OCR covers 80% of image cases
+- [ ] ColPali (3B, 3GB VRAM) — deferred to L4 upgrade
 
 ### Sprint 3 — Ecosystem
 
