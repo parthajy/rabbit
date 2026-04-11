@@ -331,6 +331,44 @@ async def check(req: CheckRequest, tenant: Tenant = Depends(get_tenant)):
     }
 
 
+# ── Feedback ───────────────────────────────────────────────────────────────
+
+
+class FeedbackRequest(BaseModel):
+    question: str
+    answer_text: str
+    rating: int  # 1 = thumbs up, -1 = thumbs down
+    memory_ids: list[str] | None = None
+    correction: str = ""  # user's preferred answer (optional)
+
+
+@app.post("/v1/feedback")
+async def submit_feedback(req: FeedbackRequest, tenant: Tenant = Depends(get_tenant)):
+    """Submit feedback on an answer. Powers the training flywheel.
+
+    rating: 1 (good answer), -1 (bad answer)
+    correction: If bad, what should the answer have been? (optional but valuable)
+    """
+    from rabbit.core.feedback import FeedbackStore
+    fb = FeedbackStore(storage_path=STORAGE_PATH, tenant_id=tenant.tenant_id)
+    fb.record(
+        question=req.question,
+        answer_text=req.answer_text,
+        rating=req.rating,
+        memory_ids=req.memory_ids,
+        correction=req.correction,
+    )
+    return {"recorded": True, "rating": req.rating}
+
+
+@app.get("/v1/feedback/stats")
+async def feedback_stats(tenant: Tenant = Depends(get_tenant)):
+    """Get feedback statistics for this tenant."""
+    from rabbit.core.feedback import FeedbackStore
+    fb = FeedbackStore(storage_path=STORAGE_PATH, tenant_id=tenant.tenant_id)
+    return fb.stats()
+
+
 # ── Memory Management ─────────────────────────────────────────────────────
 
 

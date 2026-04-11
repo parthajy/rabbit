@@ -235,6 +235,23 @@ class Rabbit:
             context=data.get("context", ""),
         )
 
+    # ── Feedback ────────────────────────────────────────────────────────────
+
+    def thumbs_up(self, question: str, answer_text: str, memory_ids: list[str] | None = None):
+        """Mark an answer as good. Feeds the training flywheel."""
+        self._request("POST", "/v1/feedback", json={
+            "question": question, "answer_text": answer_text,
+            "rating": 1, "memory_ids": memory_ids or [],
+        })
+
+    def thumbs_down(self, question: str, answer_text: str,
+                     correction: str = "", memory_ids: list[str] | None = None):
+        """Mark an answer as bad. Optionally provide the correct answer."""
+        self._request("POST", "/v1/feedback", json={
+            "question": question, "answer_text": answer_text,
+            "rating": -1, "correction": correction, "memory_ids": memory_ids or [],
+        })
+
     # ── Knowledge Base ─────────────────────────────────────────────────────
 
     def compile(self, entity: str) -> str:
