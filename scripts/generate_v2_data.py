@@ -112,7 +112,7 @@ def call_api(system_prompt: str, user_prompt: str, max_tokens: int = 4096) -> st
 
 # ── Generators ─────────────────────────────────────────────
 
-def generate_long_extract(universe: dict) -> dict | None:
+def generate_long_extract(universe: dict) -> dict:
     """Generate a long meeting/document with full extraction."""
     source = random.choice(["meeting transcript", "email thread", "project report", "slack thread"])
     num_people = random.randint(3, 6)
@@ -171,7 +171,7 @@ Return JSON with these exact keys:
     }
 
 
-def generate_long_triage(universe: dict) -> dict | None:
+def generate_long_triage(universe: dict) -> dict:
     """Generate long content with triage classification."""
     source = random.choice(MEMORY_SOURCES)
     people = random.sample(universe["people"], random.randint(2, 5))
@@ -209,7 +209,7 @@ Content:
     }
 
 
-def generate_reasoning_answer(universe: dict) -> dict | None:
+def generate_reasoning_answer(universe: dict) -> dict:
     """Generate a reasoning/analysis question with multi-memory context."""
     people = random.sample(universe["people"], random.randint(3, 6))
     project = random.choice(universe["projects"])
@@ -273,7 +273,7 @@ Follow-up questions:
     }
 
 
-def generate_contradiction(universe: dict) -> dict | None:
+def generate_contradiction(universe: dict) -> dict:
     """Generate contradiction detection example."""
     people = random.sample(universe["people"], 3)
     project = random.choice(universe["projects"])
@@ -308,7 +308,7 @@ Make the contradiction realistic - different dates, changed budgets, reversed de
     }
 
 
-def generate_compile(universe: dict) -> dict | None:
+def generate_compile(universe: dict) -> dict:
     """Generate knowledge compilation (wiki page) example."""
     entity_type = random.choice(["person", "project", "topic"])
 
@@ -351,7 +351,7 @@ Format with **bold** headers, cite sources as [1][2], include:
     }
 
 
-def generate_long_link(universe: dict) -> dict | None:
+def generate_long_link(universe: dict) -> dict:
     """Generate memory linking example with multiple candidates."""
     people = random.sample(universe["people"], 4)
     project = random.choice(universe["projects"])
