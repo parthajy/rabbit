@@ -98,80 +98,105 @@ The Rabbit platform layer is built. The model weights (v1.4) are already on Hugg
 
 ---
 
-## What Deploys Where
+## Deployment — COMPLETE (April 11, 2026)
 
 ```
-HuggingFace (already there)
-└── reattend/rabbit-v1.4-merged    ← model weights, pulled at server startup
+HuggingFace
+└── reattend/rabbit-v1.4-merged    ← model weights
 
-New GCP L4 Server
-└── rabbit/api/server.py           ← the full platform
+GCP T4 Server (35.200.167.8, static IP)
+└── rabbit/api/server.py           ← full platform
     ├── Auth (rab_test_*/rab_live_*)
-    ├── /v1/remember, /v1/ask, /v1/check (+ 9 more endpoints)
-    ├── Qdrant (local file storage, per-tenant)
-    ├── SQLite (FTS5 + memory graph, per-tenant)
-    └── FastEmbed (embeddings, local)
+    ├── 15 endpoints
+    ├── Qdrant (vectors, per-tenant)
+    ├── SQLite (FTS5 + graph, per-tenant)
+    └── FastEmbed (embeddings)
 
-GitHub (public repo)
-└── reattend/rabbit
-    ├── rabbit/          ← Python package (pip install rabbit-memory)
-    ├── examples/
-    ├── README.md
-    └── pyproject.toml
-
-PyPI (later)
-└── rabbit-memory       ← pip install rabbit-memory
+DNS: api.rabbit.reattend.com → 35.200.167.8
 ```
 
----
-
-## Deployment Steps (Next Session)
-
-1. [ ] Create new GCP L4 instance (Mumbai, 32GB RAM, spot)
-2. [ ] Install: Python 3.11, CUDA, pip dependencies
-3. [ ] Clone repo, install: `pip install -e ".[server]"`
-4. [ ] Set env vars: `HF_TOKEN`, `RABBIT_MODEL`, `RABBIT_STORAGE`
-5. [ ] Start server: `uvicorn rabbit.api.server:app --host 0.0.0.0 --port 8000`
-6. [ ] Generate first API key: `POST /v1/keys/generate?tier=test`
-7. [ ] Test remember + ask end-to-end
-8. [ ] Point rabbit.reattend.com DNS to new IP
-9. [ ] Kill old T4 instance
-10. [ ] Push to GitHub as public repo
+### Deployment Steps — ALL DONE
+- [x] Create GCP T4 instance (Mumbai, 15GB RAM, spot) — $142/month
+- [x] Install NVIDIA drivers + CUDA
+- [x] Clone repo, install `pip install -e ".[server]"`
+- [x] Start server, generate first API key
+- [x] Test remember + ask end-to-end from laptop
+- [x] Reserve static IP (35.200.167.8)
+- [x] Set DNS: api.rabbit.reattend.com
+- [x] Set up systemd auto-restart
+- [x] Kill old server (34.47.236.12)
+- [x] Verify SDK works with default URL (zero config)
 
 ---
 
 ## Sprint Progress
 
-### Sprint 1 — Rabbit Core Engine (Week 1-2) ✅ COMPLETE
-- [x] Restructure repo: `rabbit/core/`, `rabbit/processors/`, `rabbit/storage/`
-- [x] Input processors: text, audio (faster-whisper), PDF (Docling), DOCX, images, markdown, HTML, email, calendar, code
-- [x] SQLite storage with FTS5 full-text search
-- [x] Memory graph (SQLite edges table)
-- [x] Hybrid retrieval: vector + BM25 + graph walk + importance/recency boost
-- [x] Unified ingestion pipeline: input → triage → extract → summarize → sentiment → importance → embed → store → link
-- [x] Unified query pipeline: question → intent → expand → retrieve → rerank → graph walk → answer
-- [x] `RabbitCore` class: `ingest()`, `ingest_file()`, `ask()`, `check()`, `compile()`, `lint()`
-- [x] API gateway with rab_test_*/rab_live_* auth
-- [x] Python SDK: `from rabbit import Rabbit`
-- [x] CLI tool: `rabbit remember`, `rabbit ask`, etc.
-- [x] Package config: pyproject.toml
-- [x] README + examples
-- [ ] 50 end-to-end test cases (need GPU)
-- [ ] Qdrant integration test (need qdrant-client)
-- [ ] Deploy to server
+### Sprint 1 — Rabbit Core Engine ✅ COMPLETE (April 10)
+- [x] Repo restructured: `rabbit/core/`, `rabbit/processors/`, `rabbit/storage/`
+- [x] 10 input processors built (text, audio, PDF, DOCX, images, markdown, HTML, email, calendar, code)
+- [x] SQLite FTS5 + memory graph
+- [x] Qdrant vector search
+- [x] Hybrid retrieval (vector + BM25 + graph walk + importance + recency)
+- [x] Ingestion pipeline (triage → extract → summarize → sentiment → importance → embed → store → link)
+- [x] Query pipeline (intent → expand → retrieve → graph walk → answer)
+- [x] RabbitCore class with all methods
+- [x] API gateway (15 endpoints)
+- [x] Auth (rab_test_*/rab_live_*)
+- [x] Python SDK
+- [x] CLI (9 commands)
+- [x] Deployed to GCP, tested end-to-end
 
-### Sprint 2 — Rabbit API + SDK (Week 3-4) 🔜
-- [x] FastAPI gateway (built, needs deployment)
-- [x] Auth system (built, tested)
-- [x] Python SDK (built, tested)
-- [ ] JS/TS SDK
-- [ ] SSE streaming for answers
-- [ ] Deploy to rabbit.reattend.com
+### Sprint 2 — Complete the Platform 🔄 IN PROGRESS
 
-### Sprint 3 — GitHub Launch (Week 5-6) 🔜
-### Sprint 4 — Reattend SaaS v2 (Week 7-8) 🔜
-### Sprint 5 — Teams + Polish (Week 9-10) 🔜
-### Sprint 6 — Enterprise (Week 11-14) 🔜
+**Input processor deps (install on server + test):**
+- [ ] PDF (PyPDF2)
+- [ ] Office docs (python-docx or Docling)
+- [ ] Images/OCR (tesseract + pytesseract)
+- [ ] HTML/Web (trafilatura)
+- [ ] Calendar (icalendar)
+
+**Post-processing fixes:**
+- [ ] Summary bleed: clip at `[DETAILED` or `[INSTRUCTION`
+- [ ] Triage type: strip signal prefix from type and tags
+
+**Advanced retrieval:**
+- [ ] Jina Reranker integration (137M, ~500MB VRAM)
+
+**Streaming + SDKs:**
+- [ ] SSE streaming for /v1/ask
+- [ ] JS/TS SDK (npm install @reattend/rabbit)
+
+**Deferred:**
+- [ ] ColPali (3B, 3GB VRAM) — deferred to L4 upgrade, OCR covers 80% of image cases
+
+### Sprint 3 — Ecosystem
+
+- [ ] Webhooks (memory.created, contradiction.detected)
+- [ ] Connectors (Gmail, Slack, Calendar, Obsidian, Git)
+- [ ] COMPILE signal (auto-wiki on ingest) — needs v1.5 training data
+- [ ] LINT signal (deep audit) — needs v1.5 training data
+- [ ] Publish to PyPI (pip install rabbit-memory)
+- [ ] Publish to npm (@reattend/rabbit)
+- [ ] Push GitHub repo public (reattend/rabbit)
+
+### Sprint 4 — rabbit.reattend.com + Reattend SaaS (parallel with Sprint 3)
+
+- [ ] Landing page at rabbit.reattend.com
+- [ ] API key signup (email → rab_test key, no credit card)
+- [ ] Docs site: API reference, guides, Obsidian guide
+- [ ] Stripe for rab_live upgrade
+- [ ] Rebuild Reattend as a Rabbit SDK client
+- [ ] Reattend dashboard: memory timeline, search, knowledge graph
+- [ ] Connectors in Reattend (Gmail, Calendar, Slack)
+
+### Sprint 5 — Teams + Enterprise
+
+- [ ] Team workspaces (shared memory namespace)
+- [ ] Meeting upload (audio → Whisper → pipeline)
+- [ ] Self-healing wiki (COMPILE on ingest, LINT weekly)
+- [ ] Knowledge graph visualization
+- [ ] Docker Compose for on-prem
+- [ ] First enterprise pilot
 
 ---
 
@@ -180,9 +205,9 @@ PyPI (later)
 ```
 Platform code:    10 Python files (rabbit/)
 Examples:          3 Python files (examples/)
-Docs:              3 Markdown files (README, ROADMAP, PROGRESS)
+Docs:              6 Markdown files (README, ROADMAP, PROGRESS, MASTER, V1.5_TRAINING, PITCH_DECK)
 Config:            1 TOML file (pyproject.toml)
-Training scripts: 17 Python files (scripts/) — existing, unchanged
-Training data:    82,314 examples (data/) — existing, unchanged
-Model weights:     On HuggingFace — existing, unchanged
+Training scripts: 17 Python files (scripts/) — existing
+Training data:    82,314 examples (data/) — existing
+Model weights:     On HuggingFace — existing
 ```
