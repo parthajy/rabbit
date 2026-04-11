@@ -52,42 +52,49 @@ The Rabbit platform layer is built. The model weights (v1.4) are already on Hugg
 [PASS] CLI — 9 commands
 ```
 
-### Not Yet Tested (needs GPU server)
-- [ ] LLM inference (model.generate)
-- [ ] Full remember() pipeline end-to-end
-- [ ] Full ask() pipeline end-to-end
-- [ ] FastAPI server running
-- [ ] File upload (audio, PDF, image)
-- [ ] Qdrant vector search
-- [ ] Hybrid retrieval (vector + BM25 + graph)
+### GPU Server Tests (April 11, 2026) — PASSED
+
+```
+[PASS] LLM inference — model.generate works on T4
+[PASS] /v1/remember — full ingestion pipeline (triage, extract, summarize, sentiment, importance, embed, store, link)
+[PASS] /v1/ask — full query pipeline (intent, expand, retrieve, graph walk, answer)
+[PASS] Qdrant vector search — stores and retrieves embeddings
+[PASS] Memory linking — LINK signal connects related memories automatically
+[PASS] BM25 search — SQLite FTS5 keyword matching
+[PASS] Hybrid retrieval — vector + BM25 combined
+[PASS] API auth — rab_test_* key generation and validation
+[PASS] FastAPI server — all endpoints responding
+```
+
+### Known Model Issues (to fix in v1.5 training — see V1.5_TRAINING.md)
+- Summary bleed: model adds `[DETAILED EXPLANATION]` / `[INSTRUCTION]` after good summary
+- Triage type returns "TRIAGE" instead of actual type (meeting, report, etc.)
+- Organization hallucination: invents org names not in source text ("Recode")
+- Answer date hallucination: invents dates for citations
+- Tags include signal prefix ("TRIAGE" as a tag)
 
 ---
 
-## Infrastructure Plan
+## Infrastructure — DEPLOYED
+
+### Live Server (April 11, 2026)
+- **Instance:** rabbit-platform
+- **GPU:** NVIDIA T4 (16GB VRAM)
+- **Machine:** n1-standard-4 (4 vCPU, 15GB RAM)
+- **Region:** asia-south1-a (Mumbai)
+- **IP:** 35.200.167.8:8000
+- **Cost:** ~$142/month (spot)
+- **OS:** Ubuntu 22.04 LTS, 50GB SSD
+- **Service:** systemd (`rabbit.service`), auto-restart
+- **Runs:** `rabbit/api/server.py` — full platform with auth, multi-tenancy
+
+### First API Key
+- `rab_test_09F05-B9FxJ__JhQW2DHZP12` (test tier, 100 calls/day)
 
 ### Old Server (to be killed)
-- Google Cloud T4 (16GB VRAM), Mumbai
 - IP: 34.47.236.12:8000
 - Running old `server/app.py` (v1.4, bare signals, no platform)
-
-### New Server (to be created)
-- **GPU:** L4 (24GB VRAM) — room for Whisper + Reranker alongside Rabbit
-- **RAM:** 32GB
-- **Region:** Mumbai (ap-south1) for low latency to India
-- **Cost:** ~$200-250/month on spot
-- **Runs:** `rabbit/api/server.py` — the full platform with auth, multi-tenancy, all endpoints
-- **Domain:** rabbit.reattend.com → new server IP
-
-### Why L4 over T4
-| | T4 (old) | L4 (new) |
-|--|---------|---------|
-| VRAM | 16GB | 24GB |
-| Rabbit model | ~5GB | ~5GB |
-| Whisper (base) | — | ~1.5GB |
-| Jina Reranker | — | ~500MB |
-| FastEmbed | ~500MB | ~500MB |
-| Headroom | 10GB (tight) | 16GB (comfortable) |
-| Concurrent requests | crashes | handles it |
+- **Kill after DNS switch**
 
 ---
 
