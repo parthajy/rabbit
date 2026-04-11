@@ -73,7 +73,7 @@ class Rabbit:
         timeout: Request timeout in seconds.
     """
 
-    DEFAULT_BASE_URL = "https://rabbit.reattend.com"
+    DEFAULT_BASE_URL = "http://api.rabbit.reattend.com:8000"
 
     def __init__(self, api_key: str, base_url: str | None = None, timeout: int = 120):
         self.api_key = api_key
