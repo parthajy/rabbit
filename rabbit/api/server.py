@@ -116,6 +116,49 @@ class CompileRequest(BaseModel):
 # ── Core Endpoints ─────────────────────────────────────────────────────────
 
 
+@app.post("/v1/ingest")
+async def ingest(req: RememberRequest, tenant: Tenant = Depends(get_tenant)):
+    """Legacy ingest endpoint for Reattend.com compatibility.
+
+    Same as /v1/remember but returns data in the format Reattend expects:
+    {triage, extract, summary, sentiment, importance, embedding}
+    """
+    key_manager.check_rate_limit(tenant, "ingest")
+    engine = _get_engine(tenant.tenant_id)
+
+    memory = engine.remember(
+        content=req.content,
+        source=req.source or "unknown",
+        metadata=req.metadata or {},
+    )
+
+    import json as _json
+
+    return {
+        "triage": _json.dumps({
+            "type": memory.triage_type,
+            "summary": memory.summary,
+            "tags": memory.tags,
+        }),
+        "extract": _json.dumps({
+            "people": memory.extraction.people,
+            "organizations": memory.extraction.organizations,
+            "decisions": memory.extraction.decisions,
+            "action_items": memory.extraction.action_items,
+            "dates": memory.extraction.dates,
+            "topics": memory.extraction.topics,
+        }),
+        "summary": memory.summary,
+        "sentiment": memory.sentiment,
+        "importance": _json.dumps({
+            "score": memory.importance,
+            "reason": memory.importance_reason,
+        }),
+        "embedding": memory.embedding,
+        "latency_ms": memory.metadata.get("ingestion_latency_ms", 0),
+    }
+
+
 @app.post("/v1/remember")
 async def remember(req: RememberRequest, tenant: Tenant = Depends(get_tenant)):
     """Ingest content into memory.
@@ -313,6 +356,31 @@ def _stream_ask(engine: RabbitCore, question: str, limit: int):
         })}
 
     return EventSourceResponse(event_generator())
+
+
+@app.post("/v1/link")
+async def link_memories(req: dict, tenant: Tenant = Depends(get_tenant)):
+    """Memory linking: find relationships between records.
+
+    Used by Reattend.com's linking agent.
+    """
+    key_manager.check_rate_limit(tenant, "link")
+    engine = _get_engine(tenant.tenant_id)
+    start = time.time()
+
+    content = req.get("content", "")
+    result_raw = engine.llm.generate("link", content)
+
+    import json as _json
+    try:
+        parsed = _json.loads(result_raw)
+    except Exception:
+        parsed = {"links": [], "raw": result_raw}
+
+    return {
+        "result": parsed,
+        "latency_ms": int((time.time() - start) * 1000),
+    }
 
 
 @app.post("/v1/check")
@@ -553,6 +621,74 @@ async def chat_completions(req: dict, tenant: Tenant = Depends(get_tenant)):
             "finish_reason": "stop",
         }],
         "signal": signal,
+        "latency_ms": int((time.time() - start) * 1000),
+    }
+
+
+@app.post("/v1/raw")
+async def raw_completion(req: dict, tenant: Tenant = Depends(get_tenant)):
+    """Raw LLM pass-through. No signal routing, no prefix detection.
+
+    Sends the prompt directly to the model. Used by Reattend.com for
+    generateJSON, generateText, and other generic LLM calls.
+    OpenAI-compatible request/response format.
+    """
+    messages = req.get("messages", [])
+    max_tokens = req.get("max_tokens", 2048)
+    temperature = req.get("temperature", 0.2)
+
+    # Build the full prompt from messages
+    system_prompt = ""
+    user_prompt = ""
+    for msg in messages:
+        if msg.get("role") == "system":
+            system_prompt = msg.get("content", "")
+        elif msg.get("role") == "user":
+            user_prompt = msg.get("content", "")
+
+    if not user_prompt:
+        raise HTTPException(status_code=400, detail="No user message found")
+
+    engine = _get_engine(tenant.tenant_id)
+    start = time.time()
+
+    # Use the answer signal for raw generation (most flexible, highest token limit)
+    # but override the system prompt
+    import torch
+
+    engine.llm.load()
+    llm_messages = []
+    if system_prompt:
+        llm_messages.append({"role": "system", "content": system_prompt})
+    llm_messages.append({"role": "user", "content": user_prompt})
+
+    inputs = engine.llm.tokenizer.apply_chat_template(
+        llm_messages, tokenize=True, add_generation_prompt=True,
+        return_tensors="pt", return_dict=True,
+    ).to(engine.llm.model.device)
+
+    input_len = inputs["input_ids"].shape[-1]
+
+    with torch.no_grad():
+        outputs = engine.llm.model.generate(
+            **inputs,
+            max_new_tokens=min(max_tokens, 4096),
+            temperature=max(temperature, 0.01),
+            do_sample=temperature > 0.01,
+        )
+
+    response_text = engine.llm.tokenizer.decode(outputs[0][input_len:], skip_special_tokens=True).strip()
+
+    return {
+        "id": f"rabbit-{int(time.time())}",
+        "object": "chat.completion",
+        "created": int(time.time()),
+        "model": "rabbit-v1.4",
+        "choices": [{
+            "index": 0,
+            "message": {"role": "assistant", "content": response_text},
+            "finish_reason": "stop",
+        }],
         "latency_ms": int((time.time() - start) * 1000),
     }
 
