@@ -24,7 +24,7 @@ from openai import OpenAI
 
 # ── Config ──────────────────────────────────────────────────────────────────
 
-RABBIT_URL = "http://34.93.210.241:8000/v1/chat/completions"
+RABBIT_URL = "http://34.47.236.12:8000/v1/chat/completions"
 RABBIT_KEY = "rabbit_reattend_2026_secret_key"
 
 GROQ_KEY = os.environ.get("GROQ_API_KEY", "")

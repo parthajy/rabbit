@@ -49,7 +49,13 @@ echo "  Progress is printed every 50 examples."
 echo ""
 
 export OPENAI_API_KEY=$OPENAI_KEY
-python3 scripts/generate_v2_data.py --part $PART 2>&1 | tee /workspace/generate_part${PART}.log
+
+if [ "$PART" = "3" ]; then
+    echo "  Running realistic content generation (10K full emails, transcripts, Slack, docs)..."
+    python3 scripts/generate_v2_realistic.py 2>&1 | tee /workspace/generate_part${PART}.log
+else
+    python3 scripts/generate_v2_data.py --part $PART 2>&1 | tee /workspace/generate_part${PART}.log
+fi
 
 # Step 4: Show results
 echo ""
