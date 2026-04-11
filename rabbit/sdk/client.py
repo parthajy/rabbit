@@ -182,6 +182,37 @@ class Rabbit:
             latency_ms=data.get("latency_ms", 0),
         )
 
+    def ask_stream(self, question: str, limit: int = 5):
+        """Ask a question with streaming response.
+
+        Yields events as each pipeline stage completes, then streams
+        answer chunks in real-time.
+
+        Args:
+            question: Natural language question.
+            limit: Max memories to use.
+
+        Yields:
+            dict with "event" and "data" keys.
+        """
+        import json as _json
+
+        with self._client.stream(
+            "POST", "/v1/ask",
+            json={"question": question, "limit": limit, "stream": True},
+        ) as resp:
+            for line in resp.iter_lines():
+                if not line:
+                    continue
+                if line.startswith("event:"):
+                    event_type = line[6:].strip()
+                elif line.startswith("data:"):
+                    data_str = line[5:].strip()
+                    try:
+                        yield {"event": event_type, "data": _json.loads(data_str)}
+                    except (ValueError, UnboundLocalError):
+                        pass
+
     def check(self, context: str) -> RabbitAlert:
         """Check for contradictions or forgotten commitments.
 

@@ -15,11 +15,14 @@ import time
 from pathlib import Path
 from typing import Any
 
+import json
+
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Security, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
+from sse_starlette.sse import EventSourceResponse
 
 from rabbit.api.auth import InvalidKeyError, KeyManager, RateLimitError, Tenant, TIER_LIMITS
 from rabbit.core.engine import RabbitCore
@@ -205,9 +208,13 @@ async def ask(req: AskRequest, tenant: Tenant = Depends(get_tenant)):
     """Ask a question over stored memories.
 
     Runs: intent → expand → retrieve → graph walk → answer.
+    Set stream=true for Server-Sent Events streaming.
     """
     key_manager.check_rate_limit(tenant, "ask")
     engine = _get_engine(tenant.tenant_id)
+
+    if req.stream:
+        return _stream_ask(engine, req.question, req.limit)
 
     answer = engine.ask(question=req.question, limit=req.limit)
 
@@ -220,6 +227,91 @@ async def ask(req: AskRequest, tenant: Tenant = Depends(get_tenant)):
         "memories_used": len(answer.memories_used),
         "latency_ms": answer.latency_ms,
     }
+
+
+def _stream_ask(engine: RabbitCore, question: str, limit: int):
+    """Stream the ask response as Server-Sent Events.
+
+    Sends incremental events as each pipeline stage completes,
+    then streams the answer text in chunks.
+    """
+    import asyncio
+
+    async def event_generator():
+        start = time.time()
+
+        # Stage 1: Intent
+        intent = engine.llm.generate("intent", question).strip().lower()
+        yield {"event": "intent", "data": json.dumps({"intent": intent})}
+
+        # Stage 2: Expand
+        expanded = engine.llm.generate("expand", question)
+        yield {"event": "expand", "data": json.dumps({"expanded_query": expanded})}
+
+        # Stage 3: Retrieve
+        query_embedding = engine._embed(expanded)
+        candidate_memories = engine.store.search_hybrid(
+            query=expanded, query_embedding=query_embedding, limit=limit * 2,
+        )
+
+        # Graph walk
+        graph_memories = []
+        for mem in candidate_memories[:3]:
+            connected = engine.store.get_connected(mem.id, hops=1)
+            graph_memories.extend(connected)
+        seen_ids = {m.id for m in candidate_memories}
+        for gm in graph_memories:
+            if gm.id not in seen_ids:
+                candidate_memories.append(gm)
+                seen_ids.add(gm.id)
+
+        # Rerank
+        from rabbit.core import reranker
+        if reranker.is_available() and len(candidate_memories) > limit:
+            docs = [{"text": m.summary or m.content[:512], "memory": m} for m in candidate_memories]
+            reranked = reranker.rerank(question, docs, limit=limit)
+            top_memories = [d["memory"] for d in reranked]
+        else:
+            top_memories = candidate_memories[:limit]
+
+        yield {"event": "retrieve", "data": json.dumps({"memories_found": len(top_memories)})}
+
+        if not top_memories:
+            answer_text = engine.llm.generate("dontknow", f"Question: {question}\nMemories: [None available]")
+            yield {"event": "answer", "data": json.dumps({"text": answer_text})}
+            yield {"event": "done", "data": json.dumps({"latency_ms": int((time.time() - start) * 1000)})}
+            return
+
+        # Stage 4: Generate answer
+        memory_text = "\n".join(
+            f"[{i+1}] {m.summary or m.content[:300]}"
+            for i, m in enumerate(top_memories)
+        )
+        answer_input = f"Question: {question}\n\nMemories:\n{memory_text}"
+        answer_text = engine.llm.generate("answer", answer_input)
+
+        # Stream answer in chunks (~50 char chunks to simulate token streaming)
+        chunk_size = 50
+        for i in range(0, len(answer_text), chunk_size):
+            chunk = answer_text[i:i + chunk_size]
+            yield {"event": "answer_chunk", "data": json.dumps({"chunk": chunk})}
+            await asyncio.sleep(0.01)  # Small delay for smooth streaming
+
+        # Final event with full response
+        from rabbit.core.engine import _parse_answer_sections
+        sources, followups = _parse_answer_sections(answer_text, top_memories)
+
+        yield {"event": "done", "data": json.dumps({
+            "text": answer_text,
+            "sources": sources,
+            "followups": followups,
+            "intent": intent,
+            "expanded_query": expanded,
+            "memories_used": len(top_memories),
+            "latency_ms": int((time.time() - start) * 1000),
+        })}
+
+    return EventSourceResponse(event_generator())
 
 
 @app.post("/v1/check")

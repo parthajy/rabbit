@@ -314,8 +314,14 @@ class RabbitCore:
                 candidate_memories.append(gm)
                 seen_ids.add(gm.id)
 
-        # 6. Take top K for answering
-        top_memories = candidate_memories[:limit]
+        # 6. Rerank candidates (if reranker available, otherwise just take top-K)
+        from rabbit.core import reranker
+        if reranker.is_available() and len(candidate_memories) > limit:
+            docs = [{"text": m.summary or m.content[:512], "memory": m} for m in candidate_memories]
+            reranked = reranker.rerank(question, docs, limit=limit)
+            top_memories = [d["memory"] for d in reranked]
+        else:
+            top_memories = candidate_memories[:limit]
 
         if not top_memories:
             # No memories found — use DONTKNOW signal
