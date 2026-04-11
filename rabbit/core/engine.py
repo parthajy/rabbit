@@ -156,10 +156,10 @@ class RabbitCore:
         # 1. Triage — classify content type + summary + tags
         triage_raw = self.llm.generate("triage", content)
         triage = parse_json_output(triage_raw)
-        memory.triage_type = triage.get("type", "")
+        memory.triage_type = _clean_triage_type(triage.get("type", ""))
         if not memory.summary:
             memory.summary = triage.get("summary", "")
-        memory.tags = triage.get("tags", [])
+        memory.tags = _clean_tags(triage.get("tags", []))
 
         # 2. Extract — pull out entities and facts
         extract_raw = self.llm.generate("extract", content)
@@ -174,7 +174,8 @@ class RabbitCore:
         )
 
         # 3. Summarize — rich standalone summary
-        memory.summary = self.llm.generate("summarize", content)
+        raw_summary = self.llm.generate("summarize", content)
+        memory.summary = _clean_summary(raw_summary)
 
         # 4. Sentiment — tone classification
         sentiment_raw = self.llm.generate("sentiment", content).strip().lower()
@@ -184,7 +185,10 @@ class RabbitCore:
         # 5. Importance — score 1-5
         importance_raw = self.llm.generate("importance", content)
         importance = parse_json_output(importance_raw)
-        memory.importance = int(importance.get("score", 3))
+        try:
+            memory.importance = max(1, min(5, int(importance.get("score", 3))))
+        except (ValueError, TypeError):
+            memory.importance = 3
         memory.importance_reason = importance.get("reason", "")
 
         return memory
@@ -495,6 +499,51 @@ class RabbitCore:
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
+
+
+def _clean_summary(text: str) -> str:
+    """Remove model bleed from summaries.
+
+    The model sometimes appends [DETAILED EXPLANATION], [INSTRUCTION],
+    or restarts the prompt after a good summary.
+    """
+    # Cut at known bleed markers
+    for marker in ["\n\n[DETAILED", "\n\n[INSTRUCTION", "\n\n------", "\n\n[SUMMARY", "\n\nAs Rab"]:
+        idx = text.find(marker)
+        if idx > 0:
+            text = text[:idx]
+    return text.strip()
+
+
+def _clean_triage_type(triage_type: str) -> str:
+    """Clean triage type — remove signal prefix echoes."""
+    if not triage_type:
+        return ""
+    # Strip signal names that the model echoes
+    cleaned = triage_type.strip()
+    signal_names = {"TRIAGE", "EXTRACT", "SUMMARIZE", "SENTIMENT", "IMPORTANCE", "INTENT", "ANSWER", "LINK", "AMBIENT"}
+    if cleaned.upper() in signal_names:
+        return ""  # No useful type, let it be empty rather than wrong
+    return cleaned.lower()
+
+
+def _clean_tags(tags: list) -> list[str]:
+    """Remove signal prefixes and duplicates from tags."""
+    if not tags:
+        return []
+    signal_names = {"triage", "extract", "summarize", "sentiment", "importance", "intent", "answer", "link", "ambient"}
+    cleaned = []
+    seen = set()
+    for tag in tags:
+        if not isinstance(tag, str):
+            continue
+        t = tag.strip()
+        if t.lower() in signal_names:
+            continue  # Skip signal name tags
+        if t.lower() not in seen:
+            cleaned.append(t)
+            seen.add(t.lower())
+    return cleaned
 
 
 def _parse_answer_sections(answer_text: str, memories: list[Memory]) -> tuple[list[dict], list[str]]:
