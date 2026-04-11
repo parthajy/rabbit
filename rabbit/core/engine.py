@@ -177,7 +177,9 @@ class RabbitCore:
         memory.summary = self.llm.generate("summarize", content)
 
         # 4. Sentiment — tone classification
-        memory.sentiment = self.llm.generate("sentiment", content).strip().lower()
+        sentiment_raw = self.llm.generate("sentiment", content).strip().lower()
+        # Model sometimes adds explanation after the word — take first word only
+        memory.sentiment = sentiment_raw.split()[0] if sentiment_raw else "neutral"
 
         # 5. Importance — score 1-5
         importance_raw = self.llm.generate("importance", content)
@@ -215,8 +217,16 @@ class RabbitCore:
         link_raw = self.llm.generate("link", link_input)
         link_data = parse_json_output(link_raw)
 
+        # Handle both {"links": [...]} and bare [...]
+        if isinstance(link_data, list):
+            link_list = link_data
+        elif isinstance(link_data, dict):
+            link_list = link_data.get("links", [])
+        else:
+            link_list = []
+
         links = []
-        for link_info in link_data.get("links", []):
+        for link_info in link_list:
             # Map the index-based target_id to actual memory IDs
             target_id = link_info.get("target_id", "")
             # If model returned an index like "1", map to actual ID
