@@ -102,6 +102,7 @@ class AskRequest(BaseModel):
     question: str
     limit: int = 5
     stream: bool = False
+    reasoning: bool = False
 
 
 class CheckRequest(BaseModel):
@@ -216,7 +217,7 @@ async def ask(req: AskRequest, tenant: Tenant = Depends(get_tenant)):
     if req.stream:
         return _stream_ask(engine, req.question, req.limit)
 
-    answer = engine.ask(question=req.question, limit=req.limit)
+    answer = engine.ask(question=req.question, limit=req.limit, reasoning=req.reasoning)
 
     return {
         "text": answer.text,

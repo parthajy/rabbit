@@ -55,6 +55,7 @@ export interface RememberOptions {
 
 export interface AskOptions {
   limit?: number;
+  reasoning?: boolean;
 }
 
 // ── Errors ────────────────────────────────────────────────────────────────
@@ -157,6 +158,7 @@ export class Rabbit {
     const data = await this.request("POST", "/v1/ask", {
       question,
       limit: options.limit || 5,
+      reasoning: options.reasoning || false,
     });
     return data as unknown as RabbitAnswer;
   }

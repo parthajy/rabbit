@@ -157,12 +157,16 @@ class Rabbit:
             for m in data.get("memories", [])
         ]
 
-    def ask(self, question: str, limit: int = 5) -> RabbitAnswer:
+    def ask(self, question: str, limit: int = 5, reasoning: bool = False) -> RabbitAnswer:
         """Ask a question over stored memories.
 
         Args:
             question: Natural language question.
             limit: Max memories to use for answering.
+            reasoning: If True, route to a stronger model (Groq/OpenAI) for
+                deep analysis, pattern recognition, and strategic suggestions.
+                Rabbit still handles all retrieval — only the final answer
+                generation uses the external model.
 
         Returns:
             RabbitAnswer with text, sources, and follow-ups.
@@ -170,6 +174,7 @@ class Rabbit:
         data = self._request("POST", "/v1/ask", json={
             "question": question,
             "limit": limit,
+            "reasoning": reasoning,
         })
 
         return RabbitAnswer(

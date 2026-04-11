@@ -271,7 +271,7 @@ class RabbitCore:
 
     # ── ASK ─────────────────────────────────────────────────────────────────
 
-    def ask(self, question: str, limit: int = 5) -> Answer:
+    def ask(self, question: str, limit: int = 5, reasoning: bool = False) -> Answer:
         """Ask a question over stored memories.
 
         Runs: intent → expand → retrieve (hybrid) → graph walk → answer.
@@ -279,6 +279,9 @@ class RabbitCore:
         Args:
             question: Natural language question.
             limit: Max number of memories to use for answering.
+            reasoning: If True, route answer generation to a stronger external
+                model (Groq/OpenAI) for multi-step reasoning, analysis, and
+                strategic recommendations. Rabbit still handles retrieval.
 
         Returns:
             Answer object with text, sources, and follow-up suggestions.
@@ -340,7 +343,10 @@ class RabbitCore:
         )
         answer_input = f"Question: {question}\n\nMemories:\n{memory_text}"
 
-        answer_text = self.llm.generate("answer", answer_input)
+        if reasoning:
+            answer_text = _generate_reasoning_answer(answer_input)
+        else:
+            answer_text = self.llm.generate("answer", answer_input)
 
         # 8. Parse sources and follow-ups from answer
         sources, followups = _parse_answer_sections(answer_text, top_memories)
@@ -505,6 +511,82 @@ class RabbitCore:
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
+
+
+def _generate_reasoning_answer(answer_input: str) -> str:
+    """Route answer generation to a stronger external model for reasoning.
+
+    Uses Groq (llama-3.3-70b) or OpenAI (gpt-4o-mini) for multi-step
+    reasoning, analysis, and strategic recommendations.
+
+    Falls back to returning a message if no external API key is configured.
+    """
+    import os
+
+    system_prompt = (
+        "You are Rabbit, a memory AI. The user is asking a question and you have relevant "
+        "memories below. Analyze the memories deeply. Draw connections. Identify patterns. "
+        "Suggest actionable next steps. Reason step by step. Cite sources as [1][2][3]. "
+        "Use **bold** for key names and decisions. End with:\n\n"
+        "Sources:\n[1] Description\n\n"
+        "Follow-up questions:\n→ Question 1\n→ Question 2\n→ Question 3"
+    )
+
+    # Try Groq first (fast, free tier available)
+    groq_key = os.environ.get("GROQ_API_KEY", "")
+    if groq_key:
+        try:
+            import httpx
+            resp = httpx.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {groq_key}"},
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": answer_input},
+                    ],
+                    "max_tokens": 1024,
+                    "temperature": 0.3,
+                },
+                timeout=30,
+            )
+            if resp.status_code == 200:
+                return resp.json()["choices"][0]["message"]["content"]
+        except Exception:
+            pass
+
+    # Try OpenAI
+    openai_key = os.environ.get("OPENAI_API_KEY", "")
+    if openai_key:
+        try:
+            import httpx
+            resp = httpx.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {openai_key}"},
+                json={
+                    "model": "gpt-4o-mini",
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": answer_input},
+                    ],
+                    "max_tokens": 1024,
+                    "temperature": 0.3,
+                },
+                timeout=30,
+            )
+            if resp.status_code == 200:
+                return resp.json()["choices"][0]["message"]["content"]
+        except Exception:
+            pass
+
+    # No external API available — tell the user
+    return (
+        "Reasoning mode requires an external LLM (Groq or OpenAI) for deep analysis. "
+        "Set GROQ_API_KEY or OPENAI_API_KEY on the server to enable. "
+        "Without it, Rabbit answers using its own 3.8B model which handles factual "
+        "retrieval well but has limited multi-step reasoning capabilities."
+    )
 
 
 def _clean_summary(text: str) -> str:
