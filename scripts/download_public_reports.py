@@ -26,10 +26,11 @@ from pathlib import Path
 OUTPUT_DIR = Path("data/seeds/real")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# SEC EDGAR - top 200 companies by market cap (sample)
+# SEC EDGAR - top companies by market cap
 # These are public 10-K filings (annual reports)
+# Includes US, Indian ADRs, UK ADRs, Canadian dual-listed (all file 10-K or 20-F with SEC)
 SEC_COMPANIES = [
-    # Tech
+    # US Tech
     ("AAPL", "0000320193", "Apple"),
     ("MSFT", "0000789019", "Microsoft"),
     ("GOOGL", "0001652044", "Alphabet"),
@@ -40,7 +41,21 @@ SEC_COMPANIES = [
     ("ORCL", "0001341439", "Oracle"),
     ("CRM", "0001108524", "Salesforce"),
     ("ADBE", "0000796343", "Adobe"),
-    # Finance
+    ("INTC", "0000050863", "Intel"),
+    ("AMD", "0000002488", "AMD"),
+    ("CSCO", "0000858877", "Cisco"),
+    ("IBM", "0000051143", "IBM"),
+    ("AVGO", "0001730168", "Broadcom"),
+    ("QCOM", "0000804328", "Qualcomm"),
+    ("NOW", "0001373715", "ServiceNow"),
+    ("INTU", "0000896878", "Intuit"),
+    ("NFLX", "0001065280", "Netflix"),
+    ("PYPL", "0001633917", "PayPal"),
+    ("UBER", "0001543151", "Uber"),
+    ("ABNB", "0001559720", "Airbnb"),
+    ("SPOT", "0001639920", "Spotify"),
+    ("SHOP", "0001594805", "Shopify"),
+    # US Finance
     ("JPM", "0000019617", "JPMorgan Chase"),
     ("BAC", "0000070858", "Bank of America"),
     ("WFC", "0000072971", "Wells Fargo"),
@@ -48,12 +63,23 @@ SEC_COMPANIES = [
     ("MS", "0000895421", "Morgan Stanley"),
     ("V", "0001403161", "Visa"),
     ("MA", "0001141391", "Mastercard"),
-    # Healthcare
+    ("AXP", "0000004962", "American Express"),
+    ("BLK", "0001364742", "BlackRock"),
+    ("SCHW", "0000316709", "Charles Schwab"),
+    ("C", "0000831001", "Citigroup"),
+    ("USB", "0000036104", "US Bancorp"),
+    # US Healthcare
     ("JNJ", "0000200406", "Johnson & Johnson"),
     ("PFE", "0000078003", "Pfizer"),
     ("UNH", "0000731766", "UnitedHealth"),
     ("ABBV", "0001551152", "AbbVie"),
-    # Consumer
+    ("LLY", "0000059478", "Eli Lilly"),
+    ("MRK", "0000310158", "Merck"),
+    ("TMO", "0000097745", "Thermo Fisher"),
+    ("DHR", "0000313616", "Danaher"),
+    ("BMY", "0000014272", "Bristol-Myers Squibb"),
+    ("AMGN", "0000318154", "Amgen"),
+    # US Consumer
     ("WMT", "0000104169", "Walmart"),
     ("PG", "0000080424", "Procter & Gamble"),
     ("KO", "0000021344", "Coca-Cola"),
@@ -61,25 +87,66 @@ SEC_COMPANIES = [
     ("NKE", "0000320187", "Nike"),
     ("MCD", "0000063908", "McDonald's"),
     ("SBUX", "0000829224", "Starbucks"),
-    # Industrial
+    ("DIS", "0001744489", "Disney"),
+    ("CMCSA", "0001166691", "Comcast"),
+    # US Industrial
     ("BA", "0000012927", "Boeing"),
     ("CAT", "0000018230", "Caterpillar"),
     ("GE", "0000040545", "General Electric"),
     ("HON", "0000773840", "Honeywell"),
     ("LMT", "0000936468", "Lockheed Martin"),
-    # Energy
+    ("RTX", "0000101829", "Raytheon"),
+    ("GD", "0000040533", "General Dynamics"),
+    ("DE", "0000315189", "John Deere"),
+    ("MMM", "0000066740", "3M"),
+    # US Energy
     ("XOM", "0000034088", "Exxon Mobil"),
     ("CVX", "0000093410", "Chevron"),
-    # Telecom
+    ("COP", "0001163165", "ConocoPhillips"),
+    ("SLB", "0000087347", "Schlumberger"),
+    # US Telecom
     ("VZ", "0000732717", "Verizon"),
     ("T", "0000732717", "AT&T"),
-    # Transport
+    # US Transport
     ("UPS", "0001090727", "UPS"),
     ("FDX", "0001048911", "FedEx"),
-    # Retail
+    ("DAL", "0000027904", "Delta"),
+    ("UAL", "0000100517", "United Airlines"),
+    # US Retail
     ("HD", "0000354950", "Home Depot"),
     ("COST", "0000909832", "Costco"),
     ("TGT", "0000027419", "Target"),
+    ("LOW", "0000060667", "Lowe's"),
+    # Indian ADRs (file 20-F with SEC)
+    ("INFY", "0001067491", "Infosys"),
+    ("WIT", "0001123799", "Wipro"),
+    ("HDB", "0001144967", "HDFC Bank"),
+    ("IBN", "0001111759", "ICICI Bank"),
+    ("RDY", "0001380006", "Dr Reddys"),
+    ("TTM", "0001105005", "Tata Motors"),
+    ("SIFY", "0001094324", "Sify Technologies"),
+    # UK/European ADRs (file 20-F with SEC)
+    ("BP", "0000313807", "BP"),
+    ("SHEL", "0001306965", "Shell"),
+    ("AZN", "0000901832", "AstraZeneca"),
+    ("GSK", "0001131399", "GSK"),
+    ("UL", "0000217167", "Unilever"),
+    ("NVS", "0001114448", "Novartis"),
+    ("SAP", "0001000184", "SAP"),
+    ("SNY", "0001121404", "Sanofi"),
+    ("VOD", "0000839923", "Vodafone"),
+    ("DEO", "0000835403", "Diageo"),
+    # Canadian dual-listed
+    ("TD", "0000947263", "TD Bank"),
+    ("RY", "0001000275", "Royal Bank of Canada"),
+    ("BMO", "0000927971", "Bank of Montreal"),
+    ("BNS", "0000009631", "Bank of Nova Scotia"),
+    ("CNQ", "0000928054", "Canadian Natural Resources"),
+    ("SU", "0000311337", "Suncor Energy"),
+    ("ENB", "0000895728", "Enbridge"),
+    ("CNI", "0000016868", "Canadian National Railway"),
+    ("BCE", "0000718940", "BCE Inc"),
+    ("MFC", "0001086888", "Manulife"),
 ]
 
 USER_AGENT = "Rabbit Research research@reattend.ai"
