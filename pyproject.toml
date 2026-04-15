@@ -29,12 +29,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# For running Rabbit locally (model + storage + processors)
+# For running Rabbit v2.0 locally (model + storage + processors).
+# Rabbit v2.0 loads via Unsloth's FastLanguageModel — it resolves the
+# 4-bit base + LoRA adapter automatically from adapter_config.json on HF.
 local = [
-    "torch>=2.0",
-    "transformers>=4.40",
-    "peft>=0.10",
-    "bitsandbytes>=0.43",
+    "unsloth",
+    "unsloth_zoo",
+    "torch>=2.4",
+    "transformers>=4.51",
+    "peft>=0.11",
+    "bitsandbytes>=0.45",
+    "hf_transfer",
     "fastembed>=0.3",
     "qdrant-client>=1.9",
 ]

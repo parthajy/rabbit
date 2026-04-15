@@ -11,7 +11,7 @@ Usage:
     rab = Rabbit("rab_live_xyz", base_url="https://rabbit.yourcompany.com")
 
     # Fully local (no API, runs model locally)
-    rab = Rabbit.local(model_path="reattend/rabbit-v1.4-merged")
+    rab = Rabbit.local(model_path="reattend/rabbit-v2.0")
 
     # Core operations
     rab.remember("Sarah delayed the launch to March 15.", source="meeting")
@@ -86,7 +86,7 @@ class Rabbit:
         )
 
     @classmethod
-    def local(cls, model_path: str = "reattend/rabbit-v1.4-merged",
+    def local(cls, model_path: str = "reattend/rabbit-v2.0",
               storage_path: str = "~/.rabbit/data", hf_token: str = "") -> RabbitLocal:
         """Create a fully local Rabbit instance (no API calls)."""
         return RabbitLocal(model_path=model_path, storage_path=storage_path, hf_token=hf_token)
@@ -307,7 +307,7 @@ class RabbitLocal:
     Same interface as Rabbit, but uses RabbitCore directly.
     """
 
-    def __init__(self, model_path: str = "reattend/rabbit-v1.4-merged",
+    def __init__(self, model_path: str = "reattend/rabbit-v2.0",
                  storage_path: str = "~/.rabbit/data", hf_token: str = ""):
         from rabbit.core.engine import RabbitCore
         self._engine = RabbitCore(

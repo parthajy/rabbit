@@ -29,7 +29,7 @@ from rabbit.core.engine import RabbitCore
 
 # ── Config ─────────────────────────────────────────────────────────────────
 
-MODEL_PATH = os.environ.get("RABBIT_MODEL", "reattend/rabbit-v1.4-merged")
+MODEL_PATH = os.environ.get("RABBIT_MODEL", "reattend/rabbit-v2.0")
 STORAGE_PATH = os.environ.get("RABBIT_STORAGE", "~/.rabbit/data")
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
 HOST = os.environ.get("HOST", "0.0.0.0")
@@ -68,18 +68,33 @@ async def rate_limit_handler(request, exc):
 key_manager = KeyManager(db_path=os.environ.get("RABBIT_KEYS_DB", "~/.rabbit/keys.db"))
 security = HTTPBearer()
 
-# Cache of RabbitCore instances per tenant
+# Shared state.
+# - _shared_llm: one RabbitLLM loaded into GPU memory on first request,
+#   reused across every tenant. Loading a 32B LoRA per tenant would OOM.
+# - _engines: one RabbitCore per tenant, each with its own memory store but
+#   holding a reference to the shared LLM.
+_shared_llm = None
 _engines: dict[str, RabbitCore] = {}
 
 
 def _get_engine(tenant_id: str) -> RabbitCore:
-    """Get or create a RabbitCore engine for a tenant."""
+    """Get or create a RabbitCore engine for a tenant.
+
+    All tenants share a single RabbitLLM instance (loaded once into GPU
+    memory on first request). Only the MemoryStore is per-tenant.
+    """
+    global _shared_llm
+    if _shared_llm is None:
+        from rabbit.core.llm import RabbitLLM
+        _shared_llm = RabbitLLM(model_path=MODEL_PATH, hf_token=HF_TOKEN)
+
     if tenant_id not in _engines:
         _engines[tenant_id] = RabbitCore(
             model_path=MODEL_PATH,
             storage_path=STORAGE_PATH,
             tenant_id=tenant_id,
             hf_token=HF_TOKEN,
+            shared_llm=_shared_llm,
         )
     return _engines[tenant_id]
 
@@ -614,7 +629,7 @@ async def chat_completions(req: dict, tenant: Tenant = Depends(get_tenant)):
         "id": f"rabbit-{int(time.time())}",
         "object": "chat.completion",
         "created": int(time.time()),
-        "model": "rabbit-v1.4",
+        "model": "rabbit-v2.0",
         "choices": [{
             "index": 0,
             "message": {"role": "assistant", "content": response_text},
@@ -633,12 +648,13 @@ async def raw_completion(req: dict, tenant: Tenant = Depends(get_tenant)):
     generateJSON, generateText, and other generic LLM calls.
     OpenAI-compatible request/response format.
     """
+    key_manager.check_rate_limit(tenant, "raw")
+
     messages = req.get("messages", [])
     max_tokens = req.get("max_tokens", 2048)
     temperature = req.get("temperature", 0.2)
 
-    # Build the full prompt from messages
-    system_prompt = ""
+    system_prompt = None
     user_prompt = ""
     for msg in messages:
         if msg.get("role") == "system":
@@ -651,39 +667,18 @@ async def raw_completion(req: dict, tenant: Tenant = Depends(get_tenant)):
 
     engine = _get_engine(tenant.tenant_id)
     start = time.time()
-
-    # Use the answer signal for raw generation (most flexible, highest token limit)
-    # but override the system prompt
-    import torch
-
-    engine.llm.load()
-    llm_messages = []
-    if system_prompt:
-        llm_messages.append({"role": "system", "content": system_prompt})
-    llm_messages.append({"role": "user", "content": user_prompt})
-
-    inputs = engine.llm.tokenizer.apply_chat_template(
-        llm_messages, tokenize=True, add_generation_prompt=True,
-        return_tensors="pt", return_dict=True,
-    ).to(engine.llm.model.device)
-
-    input_len = inputs["input_ids"].shape[-1]
-
-    with torch.no_grad():
-        outputs = engine.llm.model.generate(
-            **inputs,
-            max_new_tokens=min(max_tokens, 4096),
-            temperature=max(temperature, 0.01),
-            do_sample=temperature > 0.01,
-        )
-
-    response_text = engine.llm.tokenizer.decode(outputs[0][input_len:], skip_special_tokens=True).strip()
+    response_text = engine.llm.generate_raw(
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        max_tokens=max_tokens,
+        temperature=temperature,
+    )
 
     return {
         "id": f"rabbit-{int(time.time())}",
         "object": "chat.completion",
         "created": int(time.time()),
-        "model": "rabbit-v1.4",
+        "model": "rabbit-v2.0",
         "choices": [{
             "index": 0,
             "message": {"role": "assistant", "content": response_text},

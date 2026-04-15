@@ -3,7 +3,7 @@ Rabbit Core Engine.
 
 The central class that ties together:
 - Input processors (text, audio, PDF, images, etc.)
-- LLM signals (12 specialized tasks)
+- LLM signals (19 specialized tasks on Rabbit v2.0 / Qwen 2.5 32B + LoRA)
 - Storage (Qdrant vectors + SQLite metadata/graph)
 - Retrieval (hybrid search + graph walk + reranking)
 
@@ -44,17 +44,22 @@ class RabbitCore:
 
     def __init__(
         self,
-        model_path: str = "reattend/rabbit-v1.4-merged",
+        model_path: str = "reattend/rabbit-v2.0",
         storage_path: str = "~/.rabbit/data",
         tenant_id: str = "default",
         hf_token: str = "",
-        device: str = "auto",
+        device: str = "auto",  # kept for backward compatibility; Unsloth handles placement
+        shared_llm: RabbitLLM | None = None,
     ):
-        self.llm = RabbitLLM(model_path=model_path, device=device, hf_token=hf_token)
+        # A single model can (and should) be shared across all tenants —
+        # loading a 32B LoRA per tenant would OOM any single GPU. Server
+        # process passes the same RabbitLLM instance to every engine.
+        self.llm = shared_llm or RabbitLLM(model_path=model_path, hf_token=hf_token)
         self.store = MemoryStore(storage_path=storage_path, tenant_id=tenant_id)
         self.tenant_id = tenant_id
 
-        # Embedding model (lazy loaded)
+        # Embedding model (lazy loaded, also shareable via module-level cache
+        # inside FastEmbed)
         self._embed_model = None
 
     def _get_embed_model(self):

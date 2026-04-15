@@ -3,11 +3,14 @@ Signal definitions for Rabbit LLM.
 
 Each signal is a specific task the model can perform, with its own
 system prompt, prefix, and optimal generation settings.
+
+Rabbit v2.0 exposes 19 signals (12 original + 7 added during v2.0 training).
 """
 
 SYSTEM_PROMPTS = {
     "intent": "You are Rabbit, Reattend's memory AI. Classify the user's query intent. Respond with exactly one word: factual, entity, temporal, synthesis, actions, history, or aggregation.",
     "extract": "You are Rabbit, Reattend's memory AI. Extract structured information from the given text. Return a JSON object with keys: people, organizations, decisions, action_items, dates, topics.",
+    "faithful_extract": "You are Rabbit, Reattend's memory AI. Extract only information explicitly present in the text. Do not infer, do not guess, do not hallucinate. Return JSON with keys: people, organizations, decisions, action_items, dates, topics.",
     "triage": "You are Rabbit, Reattend's memory AI. Classify and summarize the given content. Return a JSON object with keys: type, summary, tags.",
     "expand": "You are Rabbit, Reattend's memory AI. Expand the user's vague query into a precise, comprehensive search query that captures their likely intent.",
     "answer": (
@@ -19,6 +22,8 @@ SYSTEM_PROMPTS = {
         "Sources:\n[1] Type, Date — Description\n[2] Type, Date — Description\n\n"
         "Follow-up questions:\n→ First question\n→ Second question\n→ Third question"
     ),
+    "followup_answer": "You are Rabbit, Reattend's memory AI. Answer the followup question using the prior conversation context. Stay on topic, cite sources inline as [1][2][3], end with Sources: and Follow-up questions: sections.",
+    "formatted_answer": "You are Rabbit, Reattend's memory AI. Answer the question with clear structure: headings, bullets, and a short summary. Cite sources inline as [1][2][3]. Use **bold** for key names and decisions.",
     "summarize": "You are Rabbit, Reattend's memory AI. Generate a rich 2-4 sentence standalone summary of the given content. Capture the essence, key decisions, and action items.",
     "sentiment": "You are Rabbit, Reattend's memory AI. Classify the tone of the given content. Respond with exactly one word: positive, negative, neutral, tense, or urgent.",
     "importance": "You are Rabbit, Reattend's memory AI. Score the importance of the given content for organizational memory. Return a JSON object with keys: score (1-5) and reason (one sentence).",
@@ -36,14 +41,21 @@ SYSTEM_PROMPTS = {
         'Or {"show": true, "reason": "contradiction|forgotten_commitment|critical_context", '
         '"memory_indices": [1,2], "context": "explanation"} if they need to know. Only alert for genuine issues.'
     ),
+    "compile": "You are Rabbit, Reattend's memory AI. Compile the relevant context from multiple memories into a coherent brief. Preserve facts, de-duplicate, keep dates, cite which memory each fact came from.",
+    "compile_answer": "You are Rabbit, Reattend's memory AI. Use the provided memories to answer the question. For every claim, cite which memory supports it. End with Sources: and Follow-up questions: sections.",
+    "lint": "You are Rabbit, Reattend's memory AI. Fix any malformed JSON in the given text and return valid JSON only. No prose, no markdown, no explanation.",
+    "clean_json": "You are Rabbit, Reattend's memory AI. Return only strictly valid JSON for the given content. No prose, no markdown, no code fences.",
 }
 
 SIGNAL_PREFIXES = {
     "intent": "[INTENT]",
     "extract": "[EXTRACT]",
+    "faithful_extract": "[EXTRACT]",
     "triage": "[TRIAGE]",
     "expand": "[EXPAND]",
     "answer": "[ANSWER]",
+    "followup_answer": "[ANSWER]",
+    "formatted_answer": "[ANSWER]",
     "summarize": "[SUMMARIZE]",
     "sentiment": "[SENTIMENT]",
     "importance": "[IMPORTANCE]",
@@ -51,19 +63,33 @@ SIGNAL_PREFIXES = {
     "dontknow": "[ANSWER]",
     "link": "[LINK]",
     "ambient": "[AMBIENT]",
+    "compile": "[COMPILE]",
+    "compile_answer": "[ANSWER]",
+    "lint": "[LINT]",
+    "clean_json": "[EXTRACT]",
 }
 
 SIGNAL_SETTINGS = {
-    "intent":     {"max_tokens": 10,   "temperature": 0.01},
-    "sentiment":  {"max_tokens": 10,   "temperature": 0.01},
-    "importance": {"max_tokens": 128,  "temperature": 0.05},
-    "extract":    {"max_tokens": 512,  "temperature": 0.05},
-    "triage":     {"max_tokens": 512,  "temperature": 0.05},
-    "link":       {"max_tokens": 512,  "temperature": 0.05},
-    "ambient":    {"max_tokens": 256,  "temperature": 0.05},
-    "summarize":  {"max_tokens": 256,  "temperature": 0.2},
-    "expand":     {"max_tokens": 256,  "temperature": 0.2},
-    "answer":     {"max_tokens": 1024, "temperature": 0.2},
-    "multiturn":  {"max_tokens": 1024, "temperature": 0.2},
-    "dontknow":   {"max_tokens": 1024, "temperature": 0.2},
+    "intent":           {"max_tokens": 10,   "temperature": 0.01},
+    "sentiment":        {"max_tokens": 10,   "temperature": 0.01},
+    "importance":       {"max_tokens": 128,  "temperature": 0.05},
+    "extract":          {"max_tokens": 512,  "temperature": 0.05},
+    "faithful_extract": {"max_tokens": 512,  "temperature": 0.01},
+    "triage":           {"max_tokens": 512,  "temperature": 0.05},
+    "link":             {"max_tokens": 512,  "temperature": 0.05},
+    "ambient":          {"max_tokens": 256,  "temperature": 0.05},
+    "summarize":        {"max_tokens": 256,  "temperature": 0.2},
+    "expand":           {"max_tokens": 256,  "temperature": 0.2},
+    "answer":           {"max_tokens": 1024, "temperature": 0.2},
+    "followup_answer":  {"max_tokens": 1024, "temperature": 0.2},
+    "formatted_answer": {"max_tokens": 1024, "temperature": 0.2},
+    "multiturn":        {"max_tokens": 1024, "temperature": 0.2},
+    "dontknow":         {"max_tokens": 1024, "temperature": 0.2},
+    "compile":          {"max_tokens": 1024, "temperature": 0.1},
+    "compile_answer":   {"max_tokens": 1024, "temperature": 0.2},
+    "lint":             {"max_tokens": 512,  "temperature": 0.01},
+    "clean_json":       {"max_tokens": 512,  "temperature": 0.01},
 }
+
+# All 19 signals, for iteration
+ALL_SIGNALS = list(SYSTEM_PROMPTS.keys())
