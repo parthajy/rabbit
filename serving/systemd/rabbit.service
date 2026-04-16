@@ -11,8 +11,8 @@ WorkingDirectory=/opt/rabbit
 Environment=HF_HOME=/opt/rabbit/hfcache
 Environment=HF_HUB_ENABLE_HF_TRANSFER=1
 Environment=TRANSFORMERS_OFFLINE=0
-ExecStart=/opt/rabbit/venv/bin/python -m uvicorn rabbit_server:app --host 0.0.0.0 --port 8000 --log-level info
-Restart=on-failure
+ExecStart=/opt/rabbit/venv/bin/python -m uvicorn rabbit.api.server:app --host 0.0.0.0 --port 8000 --log-level info
+Restart=always
 RestartSec=10
 StandardOutput=append:/var/log/rabbit/server.log
 StandardError=append:/var/log/rabbit/server.log

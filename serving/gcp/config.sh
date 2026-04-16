@@ -6,8 +6,8 @@
 # GCP project / location
 # ------------------------------------------------------------
 export PROJECT_ID="rabbit-492510"
-export REGION="us-central1"
-export ZONE="us-central1-c"
+export REGION="asia-south1"
+export ZONE="asia-south1-b"
 
 # ------------------------------------------------------------
 # Instance sizing (L4 Spot — cheap, fits Qwen 32B 4-bit)
@@ -37,7 +37,7 @@ export IMAGE_NAME_PREFIX="rabbit-v2"             # individual images get a times
 # VM + networking
 # ------------------------------------------------------------
 export VM_NAME="rabbit-v2"
-export STATIC_IP_NAME="rabbit-static-ip"
+export STATIC_IP_NAME="rabbit-static"
 export FIREWALL_RULE="rabbit-allow-8000"
 export NETWORK_TAG="rabbit-server"
 export RABBIT_PORT="8000"

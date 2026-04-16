@@ -88,7 +88,20 @@ gcloud compute instances create "$VM_NAME" \
     --maintenance-policy=TERMINATE \
     --provisioning-model=SPOT \
     --instance-termination-action=STOP \
+    --restart-on-failure \
     --address="$STATIC_IP" \
     --tags="$NETWORK_TAG"
+
+# Disable auto-stop (we want always-on) and ensure correct server entrypoint
+echo "===> Disabling auto-stop, updating rabbit.service..."
+sleep 30  # wait for SSH to be ready
+gcloud compute ssh "$VM_NAME" --zone="$ZONE" --command="
+  sudo systemctl disable auto-stop.timer 2>/dev/null || true
+  sudo systemctl stop auto-stop.timer 2>/dev/null || true
+  sudo sed -i 's|rabbit_server:app|rabbit.api.server:app|' /etc/systemd/system/rabbit.service
+  sudo sed -i 's|Restart=on-failure|Restart=always|' /etc/systemd/system/rabbit.service
+  sudo systemctl daemon-reload
+  sudo systemctl restart rabbit
+" 2>/dev/null || true
 
 wait_for_health
