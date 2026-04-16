@@ -42,11 +42,11 @@
 
 **"The Memory AI for Organizations"**
 
-### What Rabbit Is (Technical Definition)
+### What Rabbit Is
 
-Rabbit is a **3.8 billion parameter large language model** (LLM), fine-tuned from Microsoft's Phi-3.5 Mini using **LoRA (Low-Rank Adaptation)** on **80,000+ proprietary training examples** across **15 specialized memory signals**.
+**Rabbit is a 3.8 billion parameter proprietary LLM built from the ground up for organizational memory.** Trained on 100,000+ proprietary examples across 15 specialized memory signals, Rabbit does what no general-purpose AI can — it captures decisions, extracts entities, links related context, detects contradictions, reasons over organizational history, and delivers conversational answers with cited sources.
 
-Unlike general-purpose models (GPT-4, Claude, Llama) that do everything okay, Rabbit does ONE thing exceptionally: **organizational memory** — capture, extract, link, reason, and recall.
+Unlike GPT-4, Claude, or Llama — which are generalists that forget everything between sessions — Rabbit is a specialist. Built for one job. The best in the world at that job.
 
 ### What Rabbit Does
 

@@ -1,0 +1,6 @@
+[Unit]
+Description=Rabbit auto-stop on idle
+
+[Service]
+Type=oneshot
+ExecStart=/opt/rabbit/auto_stop.sh

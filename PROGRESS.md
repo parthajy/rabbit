@@ -2,13 +2,36 @@
 
 > Tracking what's built, what's live, what's next.
 
-**Last updated:** April 10, 2026
+**Last updated:** April 14, 2026
 
 ---
 
-## Current Status: Sprint 1 Complete
+## Current Status: v2.0 trained, serving in progress
 
-The Rabbit platform layer is built. The model weights (v1.4) are already on HuggingFace. Everything below wraps those weights into a product.
+Rabbit v2.0 (Qwen 2.5 32B fine-tune, 19 signals, 90K examples) is **trained and uploaded to HuggingFace**. The GCP serving stack is **built and baked** — one command (`rabbit wake`) spawns a Spot L4 VM that boots to a healthy FastAPI server in ~90 seconds. The only blocker right now is us-central1-a Spot churn eating flow state during R&D testing. Pivoting to 24/7 RunPod Reserved L4 for Month 1 while Microsoft Founders Hub credits land.
+
+**See [training.md](./training.md), [scrappy.md](./scrappy.md), and [SYSTEM.md](./SYSTEM.md) for the full v2.0 story.**
+
+---
+
+## v2.0 Work (April 13-14, 2026)
+
+- [x] Train Qwen 32B on 90K examples (RunPod H100, 26 hrs, ~$70)
+- [x] Upload LoRA to `reattend/rabbit-v2.0` on HuggingFace
+- [x] Upload training data to `reattend/rabbit-v2-training-data` on HuggingFace
+- [x] Write full serving stack: rabbit_server.py (FastAPI + Unsloth + streaming + verbose logging), install.sh, 00_bake_disk.sh, vm_spawn.sh, vm_stop.sh, vm_status.sh, systemd units, rabbit CLI
+- [x] Bake reusable GCP image (`rabbit-v2-20260414-1202`) — smoke test passed, "Pong! I'm here and ready" in 42.6s load+gen on L4
+- [x] Document everything in SYSTEM.md + training.md + scrappy.md for cofounder sharing
+- [ ] **BLOCKED**: Reliable serving — us-central1-a Spot L4 stockouts during `rabbit wake` / post-restart. Pivoting strategy to 24/7 RunPod Reserved next.
+- [ ] First real inference call across all 19 signals
+- [ ] Plug Rabbit v2.0 into Reattend end-to-end
+- [ ] Apply to Microsoft for Startups Founders Hub ($25k Azure credit safety net)
+
+---
+
+## Earlier work: Sprint 1 (Rabbit v1.x platform layer)
+
+The platform layer below was built on top of v1.4 (Phi-3.5 Mini). It still exists but needs to be re-wired to v2.0's new serving URL once RunPod is up. Leaving the v1.x entries for historical context.
 
 ---
 

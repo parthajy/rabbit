@@ -1,36 +1,46 @@
 {
   "scores": {
     "rabbit": 0,
-    "groq": 0,
+    "groq": 4,
     "openai": 0,
-    "tie": 5
+    "tie": 1
   },
   "total": 5,
   "results": [
     {
-      "signal": "extract",
-      "auto": false,
-      "score": "skip"
+      "signal": "intent",
+      "auto": true,
+      "rabbit": false,
+      "groq": true,
+      "openai": false
     },
     {
-      "signal": "extract",
-      "auto": false,
-      "score": "skip"
+      "signal": "intent",
+      "auto": true,
+      "rabbit": false,
+      "groq": true,
+      "openai": false
     },
     {
-      "signal": "extract",
-      "auto": false,
-      "score": "skip"
+      "signal": "intent",
+      "auto": true,
+      "rabbit": false,
+      "groq": false,
+      "openai": false
     },
     {
-      "signal": "extract",
-      "auto": false,
-      "score": "skip"
+      "signal": "intent",
+      "auto": true,
+      "rabbit": false,
+      "groq": true,
+      "openai": false
     },
     {
-      "signal": "extract",
-      "auto": false,
-      "score": "skip"
+      "signal": "intent",
+      "auto": true,
+      "rabbit": false,
+      "groq": true,
+      "openai": false
     }
   ]
 }

@@ -1,0 +1,527 @@
+**Axion Finance – Weekly Strategy & Operations Meeting**
+**Date:** March 18, 2026
+**Time:** 9:00 AM – 10:45 AM
+**Attendees:**
+
+* Arjun Mehta (CEO)
+* Kavya Rao (CFO)
+* Rohan Sen (Head of Product)
+* Neha Kapoor (Head of Risk & Compliance)
+* Daniel Joseph (VP Engineering)
+* Priya Shah (Head of Growth)
+
+---
+
+**Arjun Mehta (CEO):**
+Alright, let’s get started. Today is March 18, 2026. This is our third strategy sync this quarter after the Feb 3 and Feb 24 meetings. We have a packed agenda—lending rollout, revenue targets, compliance updates, and the mobile app launch timeline. I want decisions, not just discussions. Kavya, can you start with financials?
+
+---
+
+**Kavya Rao (CFO):**
+Sure. So as of March 15, 2026, our Q1 revenue stands at ₹18.6 crore. We’re tracking 8% below the ₹20.2 crore target we committed on January 5. The biggest gap is in BNPL—down 14% compared to projections.
+
+On the cost side, burn rate is ₹3.2 crore per month, slightly above the ₹2.8 crore we agreed in the February 24 meeting. Engineering costs alone are up 22% month-over-month.
+
+---
+
+**Arjun:**
+That’s not acceptable. Daniel, why is engineering overshooting?
+
+---
+
+**Daniel Joseph (VP Engineering):**
+Two reasons. One, we accelerated hiring—added 6 engineers between February 10 and March 1. Second, infra costs increased by ₹18 lakh due to higher API calls after the pilot with 3 new NBFC partners.
+
+---
+
+**Kavya:**
+But we didn’t approve that scale-up. The February 3 decision was to cap infra growth at 10%, not 25%.
+
+---
+
+**Daniel:**
+That was before Priya’s team pushed the new onboarding campaign on March 5. Traffic doubled.
+
+---
+
+**Priya Shah (Head of Growth):**
+We had to. CAC dropped from ₹1,200 to ₹740 during that campaign. It was the best-performing funnel since December 2025.
+
+---
+
+**Arjun:**
+Okay, pause. This is exactly the coordination issue we discussed on February 24. Growth and engineering are not aligned.
+
+**Decision 1:** All campaign launches above ₹10 lakh budget must be pre-approved by both Finance and Engineering, effective March 20, 2026.
+
+---
+
+**Priya:**
+That slows us down, Arjun.
+
+---
+
+**Arjun:**
+It slows chaos, not growth.
+
+---
+
+**Rohan Sen (Head of Product):**
+Can we move to lending? The credit line product is still stuck. We were supposed to launch beta on March 10.
+
+---
+
+**Neha Kapoor (Head of Risk & Compliance):**
+Because your underwriting model failed validation. The default risk was projected at 9.8%, while our threshold is 6.5%.
+
+---
+
+**Rohan:**
+That’s assuming static income verification. If we include transaction-level behavioral scoring, it drops to 6.2%.
+
+---
+
+**Neha:**
+That model hasn’t been audited.
+
+---
+
+**Rohan:**
+We can’t wait for a full audit every time. We’ll lose market.
+
+---
+
+**Kavya:**
+Losing money is worse than losing market.
+
+---
+
+**Arjun:**
+Let’s settle this.
+
+**Decision 2:** Credit line beta launch moved from March 10 to April 5, 2026, contingent on revised risk model approval by March 28.
+
+---
+
+**Neha:**
+That’s tight, but doable if we get full data access by March 20.
+
+---
+
+**Daniel:**
+We can prioritize that.
+
+---
+
+**Action Item 1:** Daniel to provide complete transaction-level dataset to Risk team by March 20, 2026.
+**Action Item 2:** Neha to finalize risk validation report by March 28, 2026.
+
+---
+
+**Priya:**
+What about go-to-market? We already spent ₹35 lakh on pre-launch campaigns between February 25 and March 12.
+
+---
+
+**Kavya:**
+Which is exactly why we need alignment. That spend assumed a March 10 launch.
+
+---
+
+**Arjun:**
+We’ll salvage it.
+
+**Decision 3:** Re-purpose existing campaign assets for April 5 launch; no additional marketing spend until March 30.
+
+---
+
+**Priya:**
+That cuts momentum.
+
+---
+
+**Arjun:**
+It preserves cash.
+
+---
+
+**Rohan:**
+Switching topics—the mobile app. The iOS version is ready, Android is at 85%. We committed in the January 15 roadmap to launch both by March 25.
+
+---
+
+**Daniel:**
+Android won’t make it. Realistically April 10.
+
+---
+
+**Priya:**
+We can’t launch iOS alone. 72% of our users are on Android.
+
+---
+
+**Rohan:**
+But delaying both hurts perception.
+
+---
+
+**Arjun:**
+What’s the impact?
+
+---
+
+**Priya:**
+If we delay full launch to April 10, we lose at least 12,000 projected signups between March 25 and April 10.
+
+---
+
+**Kavya:**
+And what’s the revenue impact?
+
+---
+
+**Priya:**
+Roughly ₹1.1 crore in transaction volume, with 2.2% margin.
+
+---
+
+**Arjun:**
+So about ₹2.4 lakh revenue. Not huge.
+
+---
+
+**Decision 4:** Full mobile app launch (iOS + Android) moved to April 10, 2026.
+
+---
+
+**Action Item 3:** Daniel to ensure Android build is production-ready by April 5, 2026.
+**Action Item 4:** Priya to revise launch campaign plan by March 25, 2026.
+
+---
+
+**Neha:**
+We also need to talk about RBI compliance updates from March 1 circular. We’re currently non-compliant on KYC refresh cycles.
+
+---
+
+**Arjun:**
+How bad?
+
+---
+
+**Neha:**
+About 18% of active users haven’t completed updated KYC requirements.
+
+---
+
+**Kavya:**
+That’s a regulatory risk.
+
+---
+
+**Neha:**
+If audited after April 30, we could face penalties up to ₹50 lakh.
+
+---
+
+**Daniel:**
+We can push in-app reminders.
+
+---
+
+**Rohan:**
+That won’t be enough.
+
+---
+
+**Priya:**
+We can incentivize completion—cashback or rewards.
+
+---
+
+**Kavya:**
+No. That adds cost.
+
+---
+
+**Arjun:**
+We need compliance, not marketing gimmicks.
+
+**Decision 5:** Mandatory KYC refresh enforcement starting April 1, 2026—users blocked from transactions if incomplete.
+
+---
+
+**Priya:**
+That will drop active users by at least 10%.
+
+---
+
+**Arjun:**
+Temporary drop is acceptable.
+
+---
+
+**Action Item 5:** Rohan to implement KYC enforcement logic by March 28, 2026.
+**Action Item 6:** Priya to design non-monetary nudges (notifications, UX flows) by March 25, 2026.
+
+---
+
+**Kavya:**
+Coming back to revenue—we need to close the ₹1.6 crore gap for Q1. Any ideas?
+
+---
+
+**Priya:**
+We can push merchant partnerships. Each new merchant adds ~₹8 lakh monthly volume. If we onboard 20 by March 31, that’s ₹1.6 crore.
+
+---
+
+**Daniel:**
+Integration takes at least 10 days per merchant.
+
+---
+
+**Rohan:**
+Not if we use the new plug-and-play API we discussed on February 3.
+
+---
+
+**Daniel:**
+That API isn’t stable.
+
+---
+
+**Rohan:**
+It’s 90% ready.
+
+---
+
+**Daniel:**
+90% is not production-ready.
+
+---
+
+**Arjun:**
+We need speed here.
+
+**Decision 6:** Launch limited merchant onboarding using plug-and-play API for up to 10 merchants before March 31.
+
+---
+
+**Action Item 7:** Daniel to stabilize API for limited rollout by March 22, 2026.
+**Action Item 8:** Priya to onboard 10 merchants by March 31, 2026.
+
+---
+
+**Neha:**
+Risk note—new merchants increase fraud exposure.
+
+---
+
+**Arjun:**
+Mitigation?
+
+---
+
+**Neha:**
+Daily transaction caps for first 30 days.
+
+---
+
+**Rohan:**
+That hurts merchant experience.
+
+---
+
+**Arjun:**
+Better than fraud losses.
+
+---
+
+**Decision 7:** Apply ₹2 lakh/day cap for new merchants during first 30 days.
+
+---
+
+**Kavya:**
+Another issue—collections. Our delinquency rate increased from 4.2% on February 1 to 5.9% on March 12.
+
+---
+
+**Neha:**
+That’s tied to aggressive lending in January.
+
+---
+
+**Rohan:**
+We needed growth.
+
+---
+
+**Kavya:**
+Growth without discipline is reckless.
+
+---
+
+**Arjun:**
+Enough. What’s the fix?
+
+---
+
+**Neha:**
+Stricter credit filters and better recovery workflows.
+
+---
+
+**Priya:**
+We can also improve communication—reminders, repayment nudges.
+
+---
+
+**Arjun:**
+Timeline?
+
+---
+
+**Neha:**
+Initial improvements by April 5.
+
+---
+
+**Decision 8:** Reduce delinquency target from 5.9% to 4.5% by April 30, 2026.
+
+---
+
+**Action Item 9:** Neha to implement stricter credit filters by March 25, 2026.
+**Action Item 10:** Priya to deploy repayment reminder system by March 27, 2026.
+
+---
+
+**Daniel:**
+We’re running out of engineering bandwidth. These are too many parallel priorities.
+
+---
+
+**Arjun:**
+Then prioritize.
+
+---
+
+**Daniel:**
+We need clarity on what matters most.
+
+---
+
+**Arjun:**
+Top 3: compliance, lending launch, and revenue recovery.
+
+Everything else is secondary until April 15.
+
+---
+
+**Rohan:**
+What about the AI underwriting project?
+
+---
+
+**Arjun:**
+Paused.
+
+---
+
+**Rohan:**
+We’ve already invested ₹1.2 crore since December 2025.
+
+---
+
+**Kavya:**
+And it’s not delivering immediate ROI.
+
+---
+
+**Arjun:**
+We revisit on April 20.
+
+---
+
+**Decision 9:** Pause AI underwriting project until April 20, 2026.
+
+---
+
+**Daniel:**
+That frees up 4 engineers.
+
+---
+
+**Arjun:**
+Good. Reassign them.
+
+---
+
+**Action Item 11:** Daniel to reallocate 4 engineers to compliance and lending by March 19, 2026.
+
+---
+
+**Priya:**
+One last thing—competition. On March 14, ZentoPay launched a 0% interest BNPL for 15 days. We’re at 1.5%.
+
+---
+
+**Kavya:**
+We can’t afford zero.
+
+---
+
+**Priya:**
+We’ll lose users.
+
+---
+
+**Neha:**
+Zero interest attracts risky borrowers.
+
+---
+
+**Rohan:**
+We can do targeted zero-interest offers.
+
+---
+
+**Arjun:**
+That’s reasonable.
+
+---
+
+**Decision 10:** Introduce targeted 0% interest offers for top 20% low-risk users starting April 1, 2026.
+
+---
+
+**Action Item 12:** Rohan and Neha to define eligible user segment by March 26, 2026.
+
+---
+
+**Arjun:**
+Alright, we’re at time. Quick recap:
+
+* Credit line launch → April 5
+* Mobile app → April 10
+* KYC enforcement → April 1
+* Merchant onboarding push → 10 merchants by March 31
+* Delinquency reduction target → 4.5% by April 30
+
+We’ve made 10 decisions today. Execution is what matters now.
+
+Next meeting: March 25, 2026. I expect updates on every action item.
+
+---
+
+**Kavya:**
+And please—no surprises like last time.
+
+---
+
+**Priya:**
+No promises.
+
+---
+
+**(Light laughter, meeting ends at 10:45 AM.)**

@@ -1,0 +1,192 @@
+#!/bin/bash
+# rabbit — CLI for interacting with the Rabbit v2.0 VM on GCP from your Mac.
+#
+# Install:
+#   export PATH="$HOME/Desktop/rabbit/cli:$PATH"   # add to ~/.zshrc
+#
+# Usage:
+#   rabbit wake | stop | status | health | logs | ssh | url
+#   rabbit <signal> "<text>"
+#   echo "text" | rabbit <signal>
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+GCP_DIR="$REPO_ROOT/serving/gcp"
+source "$GCP_DIR/config.sh"
+
+TOKEN_FILE="$HOME/.rabbit_token"
+RABBIT_TOKEN=""
+if [ -f "$TOKEN_FILE" ]; then
+    RABBIT_TOKEN=$(cat "$TOKEN_FILE")
+fi
+
+get_url() {
+    if gcloud compute addresses describe "$STATIC_IP_NAME" --region="$REGION" >/dev/null 2>&1; then
+        IP=$(gcloud compute addresses describe "$STATIC_IP_NAME" --region="$REGION" --format="value(address)")
+        echo "http://$IP:$RABBIT_PORT"
+    else
+        echo ""
+    fi
+}
+
+usage() {
+    cat <<EOF
+rabbit — Rabbit v2.0 CLI
+
+VM management:
+  rabbit wake                    Create or start the Spot VM (~90s cold start)
+  rabbit stop                    Stop the VM (preserves disk, kills billing)
+  rabbit status                  Show VM state + IP + health + idle time
+  rabbit health                  Curl the /health endpoint
+  rabbit logs                    Tail the rabbit server log via SSH
+  rabbit ssh                     SSH into the VM
+  rabbit url                     Print the Rabbit API URL
+
+Signals (VM must be running — run 'rabbit wake' first):
+  rabbit extract "<text>"        Extract entities, decisions, actions (JSON)
+  rabbit faithful_extract "..."  Strict extraction (no inference)
+  rabbit triage "<text>"         Classify + summarize (JSON)
+  rabbit summarize "<text>"      2-4 sentence summary
+  rabbit answer "<question>"     Conversational answer
+  rabbit followup_answer "..."   Follow-up in ongoing conversation
+  rabbit formatted_answer "..."  Structured answer (headings/bullets)
+  rabbit compile "..."           Compile context from multiple memories
+  rabbit compile_answer "..."    Answer using compiled memories with citations
+  rabbit intent "<query>"        Classify query intent (one word)
+  rabbit expand "<query>"        Expand vague query to precise form
+  rabbit sentiment "<text>"      Tone (one word)
+  rabbit importance "<text>"     1-5 score with reason (JSON)
+  rabbit link "<candidates>"     Find related items (JSON)
+  rabbit ambient "<content>"     Detect contradictions / forgotten items
+  rabbit multiturn "<context>"   Continue multi-turn
+  rabbit dontknow "<context>"    Graceful refusal with what's missing
+  rabbit lint "<malformed json>" Fix malformed JSON
+  rabbit clean_json "<content>"  Return strict valid JSON only
+
+Flags:
+  --stream                       Stream tokens as they generate (faster feel)
+  --max <n>                      Max new tokens (default 512)
+  --temp <0.0-1.0>               Sampling temperature (default 0.3)
+  --file <path>                  Read input text from a file
+
+Examples:
+  rabbit wake
+  rabbit extract "Tom said we'd ship v2 by May 15"
+  cat meeting.txt | rabbit triage
+  rabbit answer "What did Tom commit to?" --stream
+  rabbit stop
+
+Token comes from ~/.rabbit_token (created by 00_bake_disk.sh).
+EOF
+}
+
+# ------------------------------------------------------------
+# Parse args
+# ------------------------------------------------------------
+cmd="${1:-help}"
+shift || true
+
+# Common flags
+STREAM="false"
+MAX_NEW=512
+TEMP=0.3
+FILE_INPUT=""
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --stream) STREAM="true"; shift ;;
+        --max) MAX_NEW="$2"; shift 2 ;;
+        --temp) TEMP="$2"; shift 2 ;;
+        --file) FILE_INPUT="$2"; shift 2 ;;
+        *) POSITIONAL+=("$1"); shift ;;
+    esac
+done
+set -- "${POSITIONAL[@]+"${POSITIONAL[@]}"}"
+
+# ------------------------------------------------------------
+# Dispatch
+# ------------------------------------------------------------
+case "$cmd" in
+    wake)
+        exec bash "$GCP_DIR/vm_spawn.sh"
+        ;;
+    stop)
+        exec bash "$GCP_DIR/vm_stop.sh"
+        ;;
+    status)
+        exec bash "$GCP_DIR/vm_status.sh"
+        ;;
+    url)
+        url=$(get_url)
+        if [ -z "$url" ]; then echo "(no static IP yet — run 'rabbit wake')"; else echo "$url"; fi
+        ;;
+    health)
+        url=$(get_url)
+        if [ -z "$url" ]; then echo "No VM yet. Run: rabbit wake"; exit 1; fi
+        curl -sf "$url/health" | python3 -m json.tool
+        ;;
+    logs)
+        exec gcloud compute ssh "$VM_NAME" --zone="$ZONE" --command="sudo tail -f /var/log/rabbit/server.log"
+        ;;
+    ssh)
+        exec gcloud compute ssh "$VM_NAME" --zone="$ZONE"
+        ;;
+    help|-h|--help|"")
+        usage
+        ;;
+    extract|faithful_extract|triage|summarize|answer|followup_answer|formatted_answer|compile|compile_answer|intent|expand|sentiment|importance|link|ambient|multiturn|dontknow|lint|clean_json)
+        signal="$cmd"
+        url=$(get_url)
+        if [ -z "$url" ]; then echo "No VM yet. Run: rabbit wake"; exit 1; fi
+
+        # Get text from positional arg, --file, or stdin
+        if [ -n "$FILE_INPUT" ]; then
+            text=$(cat "$FILE_INPUT")
+        elif [ $# -gt 0 ]; then
+            text="$*"
+        else
+            text=$(cat)
+        fi
+
+        if [ -z "$text" ]; then
+            echo "ERROR: no input text. Provide as arg, --file, or stdin." >&2
+            exit 1
+        fi
+
+        # Build JSON payload safely via python (handles quoting + escapes)
+        payload=$(python3 -c "
+import json, sys
+print(json.dumps({
+    'text': sys.argv[1],
+    'max_new_tokens': int(sys.argv[2]),
+    'temperature': float(sys.argv[3]),
+    'stream': sys.argv[4] == 'true',
+}))
+" "$text" "$MAX_NEW" "$TEMP" "$STREAM")
+
+        if [ "$STREAM" = "true" ]; then
+            # Stream SSE chunks to stdout
+            curl -sN -X POST "$url/signal/$signal" \
+                -H "Authorization: Bearer $RABBIT_TOKEN" \
+                -H "Content-Type: application/json" \
+                -d "$payload" | while IFS= read -r line; do
+                    if [[ "$line" == data:* ]]; then
+                        chunk=$(echo "${line#data: }" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('chunk',''),end='') if 'chunk' in d else print('\n---', d, file=sys.stderr)" 2>/dev/null || true)
+                        printf "%s" "$chunk"
+                    fi
+                done
+            echo
+        else
+            curl -sf -X POST "$url/signal/$signal" \
+                -H "Authorization: Bearer $RABBIT_TOKEN" \
+                -H "Content-Type: application/json" \
+                -d "$payload" | python3 -m json.tool
+        fi
+        ;;
+    *)
+        echo "Unknown command: $cmd" >&2
+        echo "Run 'rabbit help' for usage." >&2
+        exit 1
+        ;;
+esac

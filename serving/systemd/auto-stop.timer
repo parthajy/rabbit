@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Rabbit auto-stop check every 5 minutes
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=5min
+Unit=auto-stop.service
+
+[Install]
+WantedBy=timers.target

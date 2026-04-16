@@ -1,40 +1,45 @@
 # Rabbit — Master Document
 
 > Memory infrastructure for the world. Built by Reattend.
-> Single source of truth. Updated April 11, 2026.
+> Single source of truth. Updated April 14, 2026.
 
 ---
 
 ## Current State
 
-### What's Live
+### What's Live (as of April 14, 2026)
 
 | Component | Status | Location |
 |---|---|---|
-| Rabbit v1.4 (12 signals) | **LIVE** | GCP Mumbai, api.rabbit.reattend.com:8000 |
-| Rabbit Platform (API + SDK + CLI) | **LIVE** | 15 endpoints, rab_test/rab_live auth |
-| FastEmbed (embeddings) | **LIVE** | Bundled (nomic-embed-text-v1.5) |
-| Qdrant (vector search) | **LIVE** | Local file storage, per-tenant |
-| SQLite FTS5 (keyword search) | **LIVE** | BM25 + memory graph |
-| Model weights | **Safe** | HuggingFace (reattend/rabbit-v1.4-merged) |
-| Training data + scripts | **Safe** | GitHub (parthajy/rabbit, private) |
+| **Rabbit v2.0 (Qwen 32B, 19 signals)** | **Trained + uploaded** | HuggingFace `reattend/rabbit-v2.0` (private LoRA) |
+| Rabbit v2.0 serving (GCP L4 Spot) | **Built, bake complete, blocked by Spot churn** | GCP `rabbit-v2-20260414-1202` image, family `rabbit-v2` |
+| Rabbit v1.4 (Phi-3.5, 12 signals) | **Archived** | Previously at api.rabbit.reattend.com:8000 (torn down) |
+| Rabbit Platform (API + SDK + CLI) | **Built, untested against v2.0** | Needs re-wire to new serving URL |
+| FastEmbed (embeddings) | **Ready** | Bundled (nomic-embed-text-v1.5) |
+| Qdrant (vector search) | **Ready** | Local file storage, per-tenant |
+| SQLite FTS5 (keyword search) | **Ready** | BM25 + memory graph |
+| Model weights | **Safe** | HuggingFace `reattend/rabbit-v2.0` (LoRA only) |
+| Training data (90K) | **Safe** | HuggingFace `reattend/rabbit-v2-training-data` + GitHub |
+| Training + serving scripts | **Safe** | GitHub `parthajy/rabbit`, private |
+| **SYSTEM.md** | **Written** | Full serving system overview for cofounder sharing |
+| **scrappy.md** | **Written** | Multi-cloud credit strategy (GCP primary, Azure insurance) |
+| **training.md** | **Written** | v2.0 training + serving decisions log |
 
-### Infrastructure
+### Infrastructure — in flux
 
-| | Details |
-|---|---|
-| Server | GCP n1-standard-4 + T4 GPU (16GB VRAM), spot |
-| IP | 35.200.167.8 (static) |
-| DNS | api.rabbit.reattend.com |
-| Cost | ~$142/month |
-| OS | Ubuntu 22.04, systemd auto-restart |
-| Storage | /opt/rabbit-data (Qdrant + SQLite per tenant) |
+**Where we are right now (April 14 evening):**
+- v2.0 model trained on RunPod H100 (~$70 cash), 26 hrs, 1 epoch on 90K examples
+- GCP serving stack built end-to-end: baked image, FastAPI server, CLI, systemd
+- **Blocker**: us-central1-a Spot L4 stockouts during R&D make `rabbit wake` unreliable
+- **Decision**: pivot to 24/7 always-on RunPod Reserved L4 (~$195/mo cash) for Month 1 while Microsoft Founders Hub credits land (2-4 weeks). Then switch to always-on Azure on-demand funded by credit. GCP $300 credit preserved as fallback.
 
 ### API Key
 
 ```
-rab_test_09F05-B9FxJ__JhQW2DHZP12  (test tier, 100 calls/day)
+(TBD — will be regenerated once v2.0 serving is live. Old rab_test_* keys are retired.)
 ```
+
+Rabbit v2.0 dev/test token lives at `~/.rabbit_token` on Partha's Mac. Will be rotated when serving URL stabilizes.
 
 ---
 
@@ -78,13 +83,16 @@ Layer 1:  RABBIT CORE (Engine)         The model + processors + storage
 
 ## Training History
 
-| Version | Date | Data | Signals | Status |
-|---|---|---|---|---|
-| v1.0 | Apr 3 | 55,750 | 8 | Archived on HF |
-| v1.1 | Apr 5 | 53,901 | 10 | Archived on HF |
-| v1.2 | Apr 6 | 61,178 | 12 | Archived on HF |
-| v1.4 | Apr 9 | 82,314 | 12 | **LIVE** |
-| v1.5 | Planned | ~100,000 | 12 | 18K targeted fixes (see V1.5_TRAINING.md) |
+| Version | Date | Base | Data | Signals | Status |
+|---|---|---|---|---|---|
+| v1.0 | Apr 3 | Phi-3.5 Mini 3.8B | 55,750 | 8 | Archived on HF |
+| v1.1 | Apr 5 | Phi-3.5 Mini 3.8B | 53,901 | 10 | Archived on HF |
+| v1.2 | Apr 6 | Phi-3.5 Mini 3.8B | 61,178 | 12 | Archived on HF |
+| v1.4 | Apr 9 | Phi-3.5 Mini 3.8B | 82,314 | 12 | Retired (replaced by v2.0) |
+| v1.5 | Skipped | — | — | — | Jumped straight to v2.0 with bigger base |
+| **v2.0** | **Apr 13-14** | **Qwen 2.5 32B** | **90,049** | **19** | **Trained, serving in progress** |
+
+See [TRAINING_LOG.md](./TRAINING_LOG.md) for the full story of v2.0.
 
 ---
 

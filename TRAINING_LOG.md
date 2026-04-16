@@ -153,9 +153,70 @@ Every training run documented. Never lose context on what changed and why.
 
 ---
 
+## v2.0 — April 13–14, 2026 (COMPLETE)
+
+**Base:** Qwen 2.5 32B Instruct (Apache 2.0, ~10× larger than Phi-3.5)
+**Method:** QLoRA r=32 α=32 via Unsloth, 4-bit base, bf16 training
+**Data:** **90,049 examples** (82,314 v1.4 filtered + 4,000 real meeting datasets from HF + 3,735 real SEC 10-K extractions)
+**Signals:** 19 task types (same surface as v1.4, but trained on bigger base with more real-world documents)
+**Hardware:** 1× H100 80GB SXM on RunPod (upgraded from A100 mid-session)
+**Training:** 1 epoch, batch=1 grad_accum=16 (effective 16), seq=2048, LR=1e-4
+**Wall-clock:** ~26 hours end-to-end (11,032 steps @ ~6.9s/step + setup + upload)
+**Cost:** ~$70 cash (H100 @ ~$2.69/hr)
+**Output:** LoRA adapter only (1.1 GB) at [reattend/rabbit-v2.0](https://huggingface.co/reattend/rabbit-v2.0) on HuggingFace (private)
+
+### Key decisions
+
+- **LoRA-only shipping, no merged model.** The post-training merge hit a transformers 5.5 × Unsloth compatibility bug (`NotImplementedError` in `revert_weight_conversion`). Worked around by uploading only the LoRA adapter. This is actually the better architecture anyway — it enables per-org LoRA stacking in the future, keeps HF storage small, and avoids 4-bit merge rounding loss.
+- **Qwen 32B over staying on Phi-3.5.** Phi-3.5 at 3.8B was too small for reliable extraction on long real-world documents. Qwen 32B is the minimum viable size for enterprise-grade organizational memory reasoning.
+- **Real SEC 10-K filings in training data.** 3,735 chunks from 118 real annual reports (US tech, finance, healthcare, consumer, industrial, energy, Indian ADRs, UK/EU ADRs, Canadian dual-listed). This is the biggest quality jump over v1.x — the model has actually seen long real corporate language with real entities, real financials, real decisions.
+- **HF dataset upload.** 90K examples stored at `reattend/rabbit-v2-training-data` (private, 145 MB). Never lose the training corpus again.
+
+### Serving architecture (built April 14, 2026)
+
+- **Platform:** GCP Compute Engine, `g2-standard-8` + 1× NVIDIA L4 24GB, Spot mode
+- **Zone:** us-central1-a (first try, but stockout-prone — need zone-hop retry)
+- **Baked image:** `rabbit-v2-20260414-1202` (family `rabbit-v2`) — pre-loaded with Qwen 32B 4-bit + Rabbit LoRA + Unsloth venv + FastAPI server + systemd units. Future VMs boot to a working Rabbit in ~90 seconds.
+- **Inference:** Unsloth + 4-bit bnb, one FastAPI endpoint per signal, streaming via `TextIteratorStreamer`, verbose structured JSON logging per request.
+- **CLI:** `rabbit wake/stop/status/extract/triage/...` — single bash wrapper around `gcloud` + `curl`, both developers share one bearer token.
+- **Auto-stop:** systemd timer checks `/var/lib/rabbit/last_request` every 5 min, shuts down VM after 20 min idle.
+- **First inference:** April 14, 2026 — "Pong! I'm here and ready" (42.6s load + gen time on L4, ~35s pure load).
+
+### Blockers encountered
+
+- Transformers 5.5 SFTTrainer API drift (`formatting_func` required → solved by pre-rendering text column).
+- OOM on 2× A100 80GB at batch=2 seq=4096 (Unsloth free is single-GPU only → dropped to batch=1 seq=2048).
+- Merge bug as noted above (shipped LoRA-only instead).
+- GCP us-central1-a Spot L4 stockouts on first `rabbit wake` and again after first VM stop. **Takeaway: Spot churn eats flow state during R&D.** Pivoting to 24/7 RunPod Reserved L4 (~$195/mo cash) for M1 until Microsoft Founders Hub credits land, then switching back to always-on Azure on-demand funded by credit.
+
+### Inference pattern
+
+```python
+from unsloth import FastLanguageModel
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name="reattend/rabbit-v2.0",  # LoRA repo — base Qwen auto-resolved from adapter_config.json
+    max_seq_length=2048,
+    load_in_4bit=True,
+    token=HF_TOKEN,
+)
+FastLanguageModel.for_inference(model)
+```
+
+Memory footprint: ~20 GB VRAM (fits on L4 24GB with headroom).
+
+---
+
 ## Future Training Plans
 
-### v2.0 (Month 3)
-- DPO training from thumbs up/down preference pairs
+### v2.1 — failure-driven retraining (continuous)
+
+The verbose server logs (`/var/log/rabbit/server.log`) capture every request: prompt hash, signal, input/output tokens, latency, LoRA version, response preview, full traceback on errors. When Rabbit produces bad outputs in testing or demos, we grep the log by prompt_hash → collect failing cases → add to training data → retrain LoRA on RunPod (1-2 hrs, ~$15-30) → upload as `reattend/rabbit-v2.1` → `rabbit wake` picks up the new version on the next bake.
+
+Target: one v2.X version every 2-4 weeks, driven by real failures not synthetic drills.
+
+### v3.0 (Month 6+)
+
+- DPO training from thumbs up/down preference pairs collected via Reattend UI
+- Per-org LoRA adapters — each enterprise customer gets their own fine-tune on their corpus, stacked on base Rabbit v2.X
 - 500K+ total training examples
-- Expected: 10-20% quality jump from preference optimization
+- Expected: 10-20% quality jump from preference optimization + per-tenant alignment

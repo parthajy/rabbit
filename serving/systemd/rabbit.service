@@ -1,0 +1,21 @@
+[Unit]
+Description=Rabbit v2.0 FastAPI server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=rabbit
+Group=rabbit
+WorkingDirectory=/opt/rabbit
+Environment=HF_HOME=/opt/rabbit/hfcache
+Environment=HF_HUB_ENABLE_HF_TRANSFER=1
+Environment=TRANSFORMERS_OFFLINE=0
+ExecStart=/opt/rabbit/venv/bin/python -m uvicorn rabbit_server:app --host 0.0.0.0 --port 8000 --log-level info
+Restart=on-failure
+RestartSec=10
+StandardOutput=append:/var/log/rabbit/server.log
+StandardError=append:/var/log/rabbit/server.log
+
+[Install]
+WantedBy=multi-user.target

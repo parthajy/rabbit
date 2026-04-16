@@ -1,0 +1,670 @@
+**Client–Vendor Escalation Meeting Transcript**
+**Project:** Omni-Channel Rebranding & Digital Design Overhaul
+**Date:** April 7, 2026
+**Time:** 11:00 AM – 1:05 PM
+**Location:** Hybrid (Bank HQ + Zoom)
+
+**Participants (Client – Zenith National Bank):**
+
+* Rajiv Malhotra (Chief Marketing Officer)
+* Sneha Iyer (VP Digital Banking)
+* Amit Khanna (Procurement Head)
+* Vivek Suri (Head of Retail Banking)
+
+**Participants (Vendor – PixelCraft Studios):**
+
+* Aditya Verma (Founder & Creative Director)
+* Meera Joshi (Account Director)
+* Karan Bedi (Lead Designer)
+* Laura Fernandes (Project Manager)
+
+---
+
+### **Meeting Begins**
+
+**Rajiv Malhotra (CMO):**
+Let’s not waste time. It’s April 7 today. The original contract signed on January 12, 2026 clearly stated Phase 1 delivery by March 15. We are now 23 days overdue. This is unacceptable.
+
+---
+
+**Aditya Verma (Creative Director):**
+Rajiv, I understand the concern, but the delay isn’t unilateral. We had 11 revision cycles from your team between February 20 and March 28. That wasn’t part of the original scope.
+
+---
+
+**Sneha Iyer (VP Digital):**
+Because your initial designs didn’t meet digital compliance standards. The February 18 version failed accessibility checks—contrast ratios, typography hierarchy, everything.
+
+---
+
+**Karan Bedi (Lead Designer):**
+That’s not accurate. The February 18 version passed WCAG AA compliance. Your team introduced new requirements on March 2—AA+ standards—which were never in the brief.
+
+---
+
+**Vivek Suri (Retail Banking):**
+Look, customers don’t care about your internal definitions. Our mobile app redesign was supposed to go live April 1. We missed that window.
+
+---
+
+**Laura Fernandes (Project Manager):**
+Let’s align on facts. Timeline recap:
+
+* Jan 12: Contract signed
+* Jan 20: Discovery workshop
+* Feb 10: First design submission
+* Feb 18: Revised submission
+* March 2: New compliance requirements added
+* March 15: Original deadline
+* March 28: Last feedback received
+
+We’re not ignoring delays—but scope changed significantly.
+
+---
+
+**Amit Khanna (Procurement):**
+Scope changes don’t justify missing contractual obligations without formal change orders. There were none.
+
+---
+
+**Meera Joshi (Account Director):**
+We flagged it multiple times. Emails on March 3, March 9, and March 16 explicitly stated timeline risks.
+
+---
+
+**Rajiv:**
+Emails are not change orders. Contracts are.
+
+---
+
+**Aditya:**
+So you’re saying your team can double the work without adjusting timelines or budget?
+
+---
+
+**Amit:**
+I’m saying the process wasn’t followed.
+
+---
+
+*(Tension rises, voices overlap briefly)*
+
+---
+
+**Rajiv:**
+Enough. Let’s reset. We need three things today:
+
+1. A new delivery timeline
+2. Clarity on additional costs
+3. Assurance this won’t slip again
+
+---
+
+### **Timeline Negotiation**
+
+**Laura:**
+Given current progress—about 85% complete—we can deliver final designs by April 20, 2026.
+
+---
+
+**Sneha:**
+Too late. Our internal launch is already pushed to April 25. We need designs by April 15 at the latest.
+
+---
+
+**Karan:**
+That’s not realistic unless we cut revision cycles.
+
+---
+
+**Vivek:**
+Then cut them. We don’t need perfection; we need delivery.
+
+---
+
+**Aditya:**
+That’s a dangerous approach. You’ll end up with inconsistent brand experience.
+
+---
+
+**Rajiv:**
+We’re already dealing with inconsistency—because nothing has been delivered.
+
+---
+
+*(Pause)*
+
+---
+
+**Meera:**
+What if we structure it in phases?
+
+* Phase 1A (core screens): April 15
+* Phase 1B (remaining assets): April 22
+
+---
+
+**Sneha:**
+What’s included in 1A?
+
+---
+
+**Karan:**
+Homepage, login, dashboard, payments flow, and credit card interface—roughly 60% of user traffic screens.
+
+---
+
+**Vivek:**
+That works operationally.
+
+---
+
+**Rajiv:**
+Only if 1A is final, not “almost done.”
+
+---
+
+**Aditya:**
+Final within agreed scope as of March 28.
+
+---
+
+**Decision 1:**
+Split delivery into two phases:
+
+* Phase 1A: April 15, 2026
+* Phase 1B: April 22, 2026
+
+---
+
+**Action Item 1:** Laura to share detailed deliverables list for Phase 1A by April 8, 2026.
+
+---
+
+### **Cost Dispute**
+
+**Amit:**
+Now let’s talk money. Original contract value: ₹1.8 crore. You’re asking for an additional ₹42 lakh. On what basis?
+
+---
+
+**Meera:**
+Additional 220 design hours due to expanded compliance and 7 extra modules added after March 2.
+
+---
+
+**Sneha:**
+Those modules were implied in the initial scope.
+
+---
+
+**Aditya:**
+They were not. We scoped 12 screens. You now have 19.
+
+---
+
+**Amit:**
+Even then, ₹42 lakh is excessive.
+
+---
+
+**Karan:**
+That’s ₹19,000 per design hour, which is actually lower than our standard ₹22,000 rate.
+
+---
+
+**Amit:**
+We’re not paying for inefficiencies.
+
+---
+
+**Aditya:**
+And we’re not absorbing scope creep.
+
+---
+
+**Rajiv:**
+Let’s get practical. What’s the minimum you’ll accept?
+
+---
+
+**Meera:**
+₹35 lakh.
+
+---
+
+**Amit:**
+₹20 lakh.
+
+---
+
+**Meera:**
+That doesn’t even cover cost.
+
+---
+
+**Vivek:**
+Split the difference?
+
+---
+
+**Aditya:**
+₹30 lakh is the lowest we can go.
+
+---
+
+**Amit:**
+₹25 lakh, final.
+
+---
+
+*(Silence for ~10 seconds)*
+
+---
+
+**Aditya:**
+₹28 lakh, and we lock scope—no further changes.
+
+---
+
+**Rajiv:**
+Done.
+
+---
+
+**Decision 2:**
+Additional cost approved at ₹28 lakh, with strict scope freeze post April 7, 2026.
+
+---
+
+**Action Item 2:** Amit to issue revised purchase order by April 9, 2026.
+**Action Item 3:** Meera to submit updated invoice by April 10, 2026.
+
+---
+
+### **Quality Concerns**
+
+**Sneha:**
+Even with this, I’m concerned about quality. The March 25 version still had inconsistencies—button styles, spacing, typography.
+
+---
+
+**Karan:**
+Those were mid-iteration files.
+
+---
+
+**Sneha:**
+They were shared as “near-final.”
+
+---
+
+**Laura:**
+That was a miscommunication. We’ll tighten version control.
+
+---
+
+**Rajiv:**
+You need to do more than that. We need guarantees.
+
+---
+
+**Aditya:**
+What kind of guarantees?
+
+---
+
+**Rajiv:**
+Dedicated senior oversight. No more junior-level errors.
+
+---
+
+**Aditya:**
+Karan is our lead designer with 9 years of experience.
+
+---
+
+**Sneha:**
+Then assign a second reviewer.
+
+---
+
+**Aditya:**
+That increases cost.
+
+---
+
+**Rajiv:**
+You’ve already got ₹28 lakh extra.
+
+---
+
+*(Aditya exhales, nods slightly)*
+
+---
+
+**Decision 3:**
+Introduce mandatory dual-review design process for all final deliverables.
+
+---
+
+**Action Item 4:** Aditya to assign senior reviewer by April 8, 2026.
+
+---
+
+### **Penalty Clause Discussion**
+
+**Amit:**
+We also need to address delays. Contract includes a 1% per week penalty beyond March 15.
+
+---
+
+**Meera:**
+That’s unfair given scope changes.
+
+---
+
+**Amit:**
+Contractually valid.
+
+---
+
+**Aditya:**
+If you enforce penalties, we’ll revisit the revised pricing.
+
+---
+
+**Rajiv:**
+We’re not here to fight over clauses.
+
+---
+
+**Amit:**
+We can’t ignore it either.
+
+---
+
+**Vivek:**
+What’s the total penalty?
+
+---
+
+**Amit:**
+Three weeks delay → 3% of ₹1.8 crore = ₹5.4 lakh.
+
+---
+
+**Meera:**
+We propose waiving penalties in exchange for accelerated delivery.
+
+---
+
+**Sneha:**
+Define accelerated.
+
+---
+
+**Laura:**
+Daily progress updates, weekend work, and April 15 hard deadline for Phase 1A.
+
+---
+
+**Rajiv:**
+And if April 15 slips?
+
+---
+
+**Aditya:**
+Then penalties apply from that point onward.
+
+---
+
+**Decision 4:**
+Waive existing delay penalties; new penalties apply if Phase 1A misses April 15, 2026 deadline.
+
+---
+
+**Action Item 5:** Laura to send daily progress tracker starting April 8, 2026.
+
+---
+
+### **Communication Breakdown**
+
+**Sneha:**
+One major issue—we’re not getting timely responses. Sometimes 48-hour delays.
+
+---
+
+**Meera:**
+That’s because feedback is fragmented across email, Slack, and WhatsApp.
+
+---
+
+**Rajiv:**
+So fix it.
+
+---
+
+**Laura:**
+Let’s centralize communication.
+
+---
+
+**Karan:**
+And limit stakeholders. We’re getting conflicting feedback from 6 different people.
+
+---
+
+**Vivek:**
+That’s fair.
+
+---
+
+**Rajiv:**
+From our side, only Sneha and I will approve designs.
+
+---
+
+**Decision 5:**
+Centralize communication via single Slack channel; limit approvals to 2 stakeholders.
+
+---
+
+**Action Item 6:** Laura to set up shared Slack workspace by April 8, 2026.
+
+---
+
+### **Brand Direction Disagreement**
+
+**Vivek:**
+I still don’t like the new visual direction. It feels too “startup-like” for a bank.
+
+---
+
+**Karan:**
+That’s intentional—to appeal to younger users.
+
+---
+
+**Vivek:**
+We’re not a startup. We’re a 40-year-old bank.
+
+---
+
+**Sneha:**
+We need balance—modern but trustworthy.
+
+---
+
+**Aditya:**
+That’s exactly what we aimed for.
+
+---
+
+**Rajiv:**
+Then why did our internal survey on March 30 show only 52% approval?
+
+---
+
+**Karan:**
+Because the sample size was 120 employees, not customers.
+
+---
+
+**Vivek:**
+Employees represent the brand too.
+
+---
+
+**Aditya:**
+Employees aren’t your target audience.
+
+---
+
+*(Tension spikes again)*
+
+---
+
+**Rajiv:**
+Enough. We need data-driven decisions.
+
+---
+
+**Sneha:**
+Let’s run a customer A/B test.
+
+---
+
+**Laura:**
+That will take at least 7 days.
+
+---
+
+**Rajiv:**
+We don’t have that time.
+
+---
+
+**Aditya:**
+Then trust the design expertise.
+
+---
+
+**Vivek:**
+That’s exactly what got us here.
+
+---
+
+*(Silence)*
+
+---
+
+**Rajiv:**
+Compromise—minor tweaks, not overhaul.
+
+---
+
+**Decision 6:**
+Proceed with current design direction; incorporate limited adjustments based on internal feedback.
+
+---
+
+**Action Item 7:** Karan to submit revised design with tweaks by April 12, 2026.
+
+---
+
+### **Final Deadlines & Wrap-Up**
+
+**Rajiv:**
+Let’s lock everything:
+
+* April 8: Deliverables list + Slack setup
+* April 12: Revised designs
+* April 15: Phase 1A delivery
+* April 22: Phase 1B delivery
+* April 25: Bank internal launch
+
+Miss anything?
+
+---
+
+**Kavya (Procurement Assistant, joining late):**
+Payment schedule?
+
+---
+
+**Amit:**
+Yes—remaining ₹90 lakh + ₹28 lakh additional.
+
+---
+
+**Meera:**
+We propose:
+
+* 50% on April 15
+* 50% on April 22
+
+---
+
+**Amit:**
+No. 30%-70%.
+
+---
+
+**Meera:**
+40%-60%.
+
+---
+
+**Amit:**
+Done.
+
+---
+
+**Decision 7:**
+Payment split: 40% on April 15, 60% on April 22.
+
+---
+
+**Action Item 8:** Amit to process April 15 payment within 48 hours of delivery.
+
+---
+
+### **Closing Moments**
+
+**Rajiv:**
+This has been a difficult project. But we’re aligned now. No more surprises.
+
+---
+
+**Aditya:**
+Agreed. But alignment needs to go both ways.
+
+---
+
+**Sneha:**
+Let’s just deliver.
+
+---
+
+**Vivek:**
+And no more experiments on brand identity.
+
+---
+
+**Karan (quietly):**
+Noted.
+
+---
+
+**Laura:**
+We’ll circulate minutes by end of day.
+
+---
+
+**Rajiv:**
+Good. Next checkpoint: April 12, 2026 at 4 PM.
+
+---
+
+**Meeting ends at 1:05 PM.**
