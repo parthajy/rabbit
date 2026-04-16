@@ -13,7 +13,8 @@ Everything you need to bring Rabbit back online after terminating the RunPod pod
    - Region: **EU-RO** preferred (closest to BLR1 droplet)
 3. Configure:
    - **Container Image**: `runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04`
-   - **Volume**: attach your **Network Volume** if you have one (keeps model weights across restarts, saves ~20 min re-download)
+   - **Container Disk**: **50 GB** (default 20GB is too small — pip packages ~8GB + model weights ~18GB)
+   - **Volume**: attach your **Network Volume** if you have one (keeps model weights across pod restarts, saves ~20 min re-download next time)
    - **Expose HTTP port**: `8000`
    - **Env variables**: none needed (API key is handled in the server code)
 4. Wait for pod status → **Running**
