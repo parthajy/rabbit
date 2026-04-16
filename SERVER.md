@@ -37,14 +37,16 @@ pip install fastembed qdrant-client 2>&1 | tail -3
 # Set your HuggingFace token (needed to download private model weights)
 export HF_TOKEN="<your-huggingface-token>"
 
-# Start the server (model loads in ~2-3 min on A40)
+# Start the server
+# RABBIT_STORAGE must point at the network volume's data dir so the
+# server finds the API keys DB from previous sessions.
 # The actual server is rabbit/api/server.py — it serves:
-#   /v1/raw       — OpenAI-compatible chat completions (what Reattend uses for /api/ask + triage)
+#   /v1/raw       — OpenAI-compatible chat completions (what Reattend uses)
 #   /v1/ingest    — multi-signal pipeline (triage+extract+summarize+sentiment+importance)
-#   /v1/keys/generate — API key management
+#   /v1/keys/generate — API key management (POST to generate, key shown once)
 #   /health       — health check
 cd /workspace/rabbit
-python -m uvicorn rabbit.api.server:app \
+RABBIT_STORAGE=/workspace/rabbit-data python -m uvicorn rabbit.api.server:app \
   --host 0.0.0.0 \
   --port 8000 \
   --workers 1 \
@@ -63,7 +65,7 @@ done
 
 # Quick smoke test
 curl -s http://localhost:8000/v1/raw \
-  -H "Authorization: Bearer rab_live_Arcs9ujChXZnixCyY5xEfje5" \
+  -H "Authorization: Bearer rab_live_XhT8TvUh3hmVGCA1XQRw_FOG" \
   -H "Content-Type: application/json" \
   -d '{"model":"rabbit-v2.0","messages":[{"role":"user","content":"hello"}],"max_tokens":10}'
 ```
@@ -80,7 +82,7 @@ Every new pod gets a fresh subdomain:
 3. Test it from your laptop:
    ```bash
    curl https://XXXXXXXX-8000.proxy.runpod.net/v1/raw \
-     -H "Authorization: Bearer rab_live_Arcs9ujChXZnixCyY5xEfje5" \
+     -H "Authorization: Bearer rab_live_XhT8TvUh3hmVGCA1XQRw_FOG" \
      -H "Content-Type: application/json" \
      -d '{"model":"rabbit-v2.0","messages":[{"role":"user","content":"hi"}],"max_tokens":10}'
    ```
@@ -161,7 +163,7 @@ sqlite3 /var/www/reattend/data/reattend.db \
 | **RunPod image** | `runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04` |
 | **Rabbit server code** | `rabbit/api/server.py` (start via `uvicorn rabbit.api.server:app`) |
 | **Rabbit port** | `8000` |
-| **Rabbit API key** | `rab_live_Arcs9ujChXZnixCyY5xEfje5` |
+| **Rabbit API key** | `rab_live_XhT8TvUh3hmVGCA1XQRw_FOG` |
 | **HF model repo** | `reattend/rabbit-v2.0` (private, needs HF_TOKEN) |
 | **PM2 processes** | `reattend` (port 3000), `rabbit-web` (port 3001) |
 | **DB path** | `/var/www/reattend/data/reattend.db` |
