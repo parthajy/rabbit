@@ -137,16 +137,26 @@ def main():
         print("ERROR: No training data found")
         return
 
-    # Convert to chat format
+    # Convert to chat format — normalize all messages to exactly 3 roles
+    # (system, user, assistant) so pyarrow doesn't choke on mixed struct shapes
     print("\nConverting to chat format...")
     chat_examples = []
     skipped = 0
     for ex in raw_examples:
         msgs = format_for_chat(ex)
-        if msgs:
-            chat_examples.append({"messages": msgs})
-        else:
+        if not msgs or len(msgs) < 2:
             skipped += 1
+            continue
+        # Ensure exactly 3 messages: system, user, assistant
+        if len(msgs) == 2:
+            msgs = [{"role": "system", "content": V21_SYSTEM}] + msgs
+        elif len(msgs) > 3:
+            # Keep system + last user + last assistant
+            msgs = [msgs[0], msgs[-2], msgs[-1]]
+        # Validate roles
+        if msgs[0]["role"] != "system":
+            msgs = [{"role": "system", "content": V21_SYSTEM}] + msgs[:2]
+        chat_examples.append({"messages": msgs[:3]})
     print(f"Chat-formatted: {len(chat_examples)} (skipped {skipped})")
 
     # Load base model
