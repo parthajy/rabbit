@@ -181,25 +181,32 @@ def main():
     )
     print("v2.0 LoRA weights loaded — continuing training from here")
 
-    # Prepare dataset — serialize messages to JSON strings to avoid pyarrow
-    # struct mismatch errors (some dicts have extra keys like 'name')
-    print("\nPreparing dataset...")
+    # Prepare dataset — pre-tokenize to plain text to avoid pyarrow struct
+    # issues with mixed message formats. SFTTrainer accepts a "text" column.
+    print("\nPreparing dataset (pre-tokenizing to text)...")
+    import random as _rand
+    _rand.seed(42)
+    _rand.shuffle(chat_examples)
+
+    texts = []
+    for ex in chat_examples:
+        try:
+            text = tokenizer.apply_chat_template(
+                ex["messages"],
+                tokenize=False,
+                add_generation_prompt=False,
+            )
+            if text and len(text) > 50:
+                texts.append({"text": text})
+        except Exception:
+            continue
+    print(f"Pre-tokenized: {len(texts)} examples")
+
+    split_idx = int(len(texts) * 0.98)
     from datasets import Dataset
-
-    flat_examples = [{"messages_json": json.dumps(ex["messages"])} for ex in chat_examples]
-    dataset = Dataset.from_list(flat_examples)
-    dataset = dataset.shuffle(seed=42)
-    split = dataset.train_test_split(test_size=0.02, seed=42)
-    train_dataset = split["train"]
-    eval_dataset = split["test"]
+    train_dataset = Dataset.from_list(texts[:split_idx])
+    eval_dataset = Dataset.from_list(texts[split_idx:])
     print(f"Train: {len(train_dataset)}, Eval: {len(eval_dataset)}")
-
-    # Deserialize back in the tokenizer function
-    def deserialize_messages(example):
-        example["messages"] = json.loads(example["messages_json"])
-        return example
-    train_dataset = train_dataset.map(deserialize_messages)
-    eval_dataset = eval_dataset.map(deserialize_messages)
 
     # Train
     print(f"\nTraining config:")
