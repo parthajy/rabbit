@@ -12,12 +12,12 @@ Rabbit v2.0 runs permanently on a GCP L4 Spot VM. No more RunPod start/stop cycl
 | **VM Name** | `rabbit-v2` |
 | **Zone** | `asia-southeast1-a` (Singapore) |
 | **Machine** | `g2-standard-8` (1x L4 24GB, 8 vCPU, 32GB RAM) |
-| **IP** | `34.126.185.90` (ephemeral — stays until VM is deleted) |
+| **IP** | `34.143.190.54` (static — `rabbit-sg-static`, never changes) |
 | **Provisioning** | Spot (~$0.31/hr, ~$226/mo) |
 | **Disk** | 150GB `pd-balanced` (baked image with model weights pre-downloaded) |
 | **Baked Image** | `rabbit-v2-20260414-1202` (family: `rabbit-v2`) |
 | **Server** | `rabbit.api.server:app` via systemd, port 8000 |
-| **API Key** | `rab_live_PNkxLyQRtJXYwlMZpF7WRTyz` |
+| **API Key** | `rab_live_cc_KwnSD9TIyknKII43c0_nT` |
 | **Auto-stop** | Disabled (always-on) |
 | **Model** | `reattend/rabbit-v2.0` (LoRA on Qwen 2.5 32B 4-bit) |
 
@@ -47,13 +47,13 @@ Rabbit v2.0 runs permanently on a GCP L4 Spot VM. No more RunPod start/stop cycl
 User → reattend.com (DO droplet, BLR1)
          ↓ /api/ask, /api/records
        Rabbit API (GCP L4, Singapore)
-         http://34.126.185.90:8000/v1/raw
+         http://34.143.190.54:8000/v1/raw
          ↓
        Qwen 2.5 32B + LoRA (4-bit, ~18GB VRAM)
 ```
 
 - **Droplet** (157.245.110.176): Next.js app, SQLite DB, FastEmbed embeddings
-- **GCP VM** (34.126.185.90): Rabbit LLM only — stateless inference, no user data
+- **GCP VM** (34.143.190.54): Rabbit LLM only — stateless inference, no user data
 
 ## Day-to-day operations
 
@@ -69,14 +69,14 @@ GCP may reclaim the VM for ~5-30 minutes. The VM stops, Reattend's /api/ask retu
 gcloud compute instances start rabbit-v2 --zone=asia-southeast1-a
 ```
 
-That's it. Same IP, same disk, same API key. Model reloads in ~2 min.
+That's it. Same static IP (`34.143.190.54`), same disk, same API key. Model reloads in ~2 min. No droplet update needed.
 
 To check if it's running:
 ```bash
 gcloud compute instances describe rabbit-v2 --zone=asia-southeast1-a --format="value(status)"
 # Should say: RUNNING
 
-curl -s http://34.126.185.90:8000/health
+curl -s http://34.143.190.54:8000/health
 # Should return: {"status":"ok",...}
 ```
 
